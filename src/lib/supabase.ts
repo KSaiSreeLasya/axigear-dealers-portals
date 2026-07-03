@@ -371,7 +371,7 @@ export async function pushDatabaseBulk(
 
   // 1. Reset & Upsert Dealers
   if (dealers.length > 0) {
-    const dbDealers = dealers.map(d => ({
+    let dbDealers = dealers.map(d => ({
       id: d.id,
       name: d.name,
       code: d.code,
@@ -393,9 +393,71 @@ export async function pushDatabaseBulk(
       document_shop_license: d.documentShopLicense || null,
       document_trade_license: d.documentTradeLicense || null
     }));
-    let { error } = await supabase.from('dms_dealers').upsert(dbDealers);
-    if (error && (error.code === '42703' || error.message?.includes('column'))) {
-      console.warn(`[pushDatabaseBulk] Undefined column error in dealers upsert, falling back to basic dealer payload...`);
+
+    let attempts = 0;
+    const maxAttempts = 15;
+    let success = false;
+    let finalError = null;
+
+    while (attempts < maxAttempts) {
+      const { error } = await supabase.from('dms_dealers').upsert(dbDealers);
+      if (!error) {
+        success = true;
+        break;
+      }
+
+      finalError = error;
+      const isColumnError = error.code === '42703' || error.message?.includes('column') || error.message?.includes('attribute');
+      if (isColumnError) {
+        const match = error.message.match(/column\s+"([^"]+)"/) || error.message.match(/column\s+'([^']+)'/) || error.message.match(/attribute\s+"([^"]+)"/);
+        if (match && match[1]) {
+          const missingColumn = match[1];
+          console.warn(`[pushDatabaseBulk] Column "${missingColumn}" does not exist in dms_dealers table. Pruning from bulk payload and retrying...`);
+          dbDealers = dbDealers.map(item => {
+            const copy = { ...item };
+            delete (copy as any)[missingColumn];
+            return copy;
+          });
+          attempts++;
+          continue;
+        } else {
+          // If we can't parse, do progressive fallback
+          const firstItem = dbDealers[0] as any;
+          if (firstItem && (firstItem.document_pan || firstItem.document_gst || firstItem.document_shop_license || firstItem.document_trade_license)) {
+            console.warn(`[pushDatabaseBulk] Column error with unparseable message. Falling back by pruning document columns...`);
+            dbDealers = dbDealers.map(item => {
+              const copy = { ...item };
+              delete (copy as any).document_pan;
+              delete (copy as any).document_gst;
+              delete (copy as any).document_shop_license;
+              delete (copy as any).document_trade_license;
+              return copy;
+            });
+            attempts++;
+            continue;
+          }
+          if (firstItem && (firstItem.company_name || firstItem.incorporation_no || firstItem.dba_name || firstItem.legal_structure || firstItem.ownership_details || firstItem.registered_address)) {
+            console.warn(`[pushDatabaseBulk] Column error with unparseable message. Falling back by pruning compliance columns...`);
+            dbDealers = dbDealers.map(item => {
+              const copy = { ...item };
+              delete (copy as any).company_name;
+              delete (copy as any).incorporation_no;
+              delete (copy as any).dba_name;
+              delete (copy as any).legal_structure;
+              delete (copy as any).ownership_details;
+              delete (copy as any).registered_address;
+              return copy;
+            });
+            attempts++;
+            continue;
+          }
+        }
+      }
+      break;
+    }
+
+    if (!success && finalError) {
+      console.warn(`[pushDatabaseBulk] Falling back to absolute basic dealer schema...`);
       const basicDealers = dealers.map(d => ({
         id: d.id,
         name: d.name,
@@ -408,10 +470,9 @@ export async function pushDatabaseBulk(
         logo_url: d.logoUrl || null
       }));
       const resFallback = await supabase.from('dms_dealers').upsert(basicDealers);
-      error = resFallback.error;
-    }
-    if (error) {
-      throw new Error(`[Dealers Sync Fail]: ${error.message} (Is 'dms_dealers' created in Supabase?)`);
+      if (resFallback.error) {
+        throw new Error(`[Dealers Sync Fail]: ${resFallback.error.message} (Is 'dms_dealers' created in Supabase?)`);
+      }
     }
     reports.push(`Synced ${dealers.length} dealers successfully`);
   }
@@ -653,7 +714,7 @@ export async function pushDatabaseBulk(
 
 // --- ON-DEEP SINGLE RECORD UPSERT FOR REALTIME SYNC CHANGES ---
 export async function saveDealerToDb(d: Dealer) {
-  const payload = {
+  const payload: any = {
     id: d.id,
     name: d.name,
     code: d.code,
@@ -676,23 +737,65 @@ export async function saveDealerToDb(d: Dealer) {
     document_trade_license: d.documentTradeLicense || null
   };
 
-  const res = await supabase.from('dms_dealers').upsert(payload);
-  if (res.error && (res.error.code === '42703' || res.error.message?.includes('column'))) {
-    console.warn(`[saveDealerToDb] Undefined column error detected, retrying with basic dealer schema fallback...`);
-    const fallbackPayload = {
-      id: d.id,
-      name: d.name,
-      code: d.code,
-      location: d.location,
-      email: d.email,
-      password: d.password || 'dealer123',
-      phone: d.phone,
-      manager_name: d.managerName,
-      logo_url: d.logoUrl || null
-    };
-    return supabase.from('dms_dealers').upsert(fallbackPayload);
+  let currentPayload = { ...payload };
+  let attempts = 0;
+  const maxAttempts = 15;
+
+  while (attempts < maxAttempts) {
+    const res = await supabase.from('dms_dealers').upsert(currentPayload);
+    if (!res.error) {
+      return res;
+    }
+
+    const isColumnError = res.error.code === '42703' || res.error.message?.includes('column') || res.error.message?.includes('attribute');
+    if (isColumnError) {
+      const match = res.error.message.match(/column\s+"([^"]+)"/) || res.error.message.match(/column\s+'([^']+)'/) || res.error.message.match(/attribute\s+"([^"]+)"/);
+      if (match && match[1]) {
+        const missingColumn = match[1];
+        console.warn(`[saveDealerToDb] Column "${missingColumn}" does not exist in dms_dealers table. Pruning from payload and retrying...`);
+        delete currentPayload[missingColumn];
+        attempts++;
+        continue;
+      } else {
+        // If we can't parse, do progressive fallback
+        if (currentPayload.document_pan || currentPayload.document_gst || currentPayload.document_shop_license || currentPayload.document_trade_license) {
+          console.warn(`[saveDealerToDb] Column error with unparseable message. Falling back by pruning document columns...`);
+          delete currentPayload.document_pan;
+          delete currentPayload.document_gst;
+          delete currentPayload.document_shop_license;
+          delete currentPayload.document_trade_license;
+          attempts++;
+          continue;
+        }
+        if (currentPayload.company_name || currentPayload.incorporation_no || currentPayload.dba_name || currentPayload.legal_structure || currentPayload.ownership_details || currentPayload.registered_address) {
+          console.warn(`[saveDealerToDb] Column error with unparseable message. Falling back by pruning compliance columns...`);
+          delete currentPayload.company_name;
+          delete currentPayload.incorporation_no;
+          delete currentPayload.dba_name;
+          delete currentPayload.legal_structure;
+          delete currentPayload.ownership_details;
+          delete currentPayload.registered_address;
+          attempts++;
+          continue;
+        }
+      }
+    }
+    return res;
   }
-  return res;
+
+  // Final absolute basic fallback
+  const fallbackPayload = {
+    id: d.id,
+    name: d.name,
+    code: d.code,
+    location: d.location,
+    email: d.email,
+    password: d.password || 'dealer123',
+    phone: d.phone,
+    manager_name: d.managerName,
+    logo_url: d.logoUrl || null
+  };
+  return supabase.from('dms_dealers').upsert(fallbackPayload);
 }
 
 export async function saveInventoryItemToDb(i: InventoryItem) {

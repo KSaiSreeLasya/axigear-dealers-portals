@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Download, Eye, FileText, Search, ShieldCheck } from 'lucide-react';
 import { Dealer } from '../types';
+import { downloadInvoiceHTML } from '../utils/csvHelper';
 
 export interface DealerProduct {
   id: string;
@@ -620,8 +621,76 @@ export default function DealersManager({
                       </td>
                       <td className="py-3.5 px-2">
                         <div className="flex items-center justify-center gap-1">
-                          <button className="text-gray-400 hover:text-gray-800" title="Preview"><Eye className="w-3.5 h-3.5" /></button>
-                          <button className="text-gray-400 hover:text-gray-800" title="PDF Export"><Download className="w-3.5 h-3.5" /></button>
+                          <button 
+                            onClick={() => {
+                              const inv = {
+                                id: p.id,
+                                type: 'product',
+                                invoiceNumber: `INV-${p.modelNo}-${p.chassisNo.slice(-4) || 'DLR'}`,
+                                dealerName: p.dealerName,
+                                contactNo: p.contactNo,
+                                location: p.location,
+                                invoiceDate: p.invoiceDate,
+                                dueDate: p.invoiceDate,
+                                poNumber: `PO-${p.dealerCode}`,
+                                sentTo: p.dealerName,
+                                shipTo: p.location,
+                                paymentMode: p.paymentMode,
+                                items: [
+                                  {
+                                    product: `${p.modelNo} (${p.productDesc})`,
+                                    description: `Chassis: ${p.chassisNo} | Motor: ${p.motorNo} | Battery: ${p.batteryNo}`,
+                                    unit: p.noOfVehicles,
+                                    amount: p.amount / p.noOfVehicles,
+                                    gstRate: 18
+                                  }
+                                ],
+                                taxableValue: Math.round((p.amount / 1.18) * 100) / 100,
+                                gstAmount: Math.round((p.amount - (p.amount / 1.18)) * 100) / 100,
+                                totalAmount: p.amount
+                              };
+                              downloadInvoiceHTML(inv, 'dealer_invoice');
+                            }}
+                            className="text-gray-400 hover:text-emerald-700 cursor-pointer" 
+                            title="Preview Invoice"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              const inv = {
+                                id: p.id,
+                                type: 'product',
+                                invoiceNumber: `INV-${p.modelNo}-${p.chassisNo.slice(-4) || 'DLR'}`,
+                                dealerName: p.dealerName,
+                                contactNo: p.contactNo,
+                                location: p.location,
+                                invoiceDate: p.invoiceDate,
+                                dueDate: p.invoiceDate,
+                                poNumber: `PO-${p.dealerCode}`,
+                                sentTo: p.dealerName,
+                                shipTo: p.location,
+                                paymentMode: p.paymentMode,
+                                items: [
+                                  {
+                                    product: `${p.modelNo} (${p.productDesc})`,
+                                    description: `Chassis: ${p.chassisNo} | Motor: ${p.motorNo} | Battery: ${p.batteryNo}`,
+                                    unit: p.noOfVehicles,
+                                    amount: p.amount / p.noOfVehicles,
+                                    gstRate: 18
+                                  }
+                                ],
+                                taxableValue: Math.round((p.amount / 1.18) * 100) / 100,
+                                gstAmount: Math.round((p.amount - (p.amount / 1.18)) * 100) / 100,
+                                totalAmount: p.amount
+                              };
+                              downloadInvoiceHTML(inv, 'dealer_invoice');
+                            }}
+                            className="text-gray-400 hover:text-emerald-700 cursor-pointer" 
+                            title="Export PDF Invoice"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
                           <button className="text-gray-400 hover:text-gray-800" title="Quick edit"><Edit2 className="w-3.5 h-3.5" /></button>
                           <button onClick={() => handleDeleteProduct(p.id)} className="text-rose-500 hover:text-rose-800" title="Delete product item">
                             <Trash2 className="w-3.5 h-3.5" />

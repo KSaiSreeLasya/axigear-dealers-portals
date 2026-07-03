@@ -28,10 +28,13 @@ import {
   Boxes,
   ArrowUpRight,
   ArrowDownLeft,
-  CheckSquare
+  CheckSquare,
+  DollarSign,
+  Wrench
 } from 'lucide-react';
 import { Dealer, DealerDocument } from '../types';
 import { supabase } from '../lib/supabase';
+import { downloadInvoiceHTML } from '../utils/csvHelper';
 
 interface CrmAdminPortalProps {
   dealers: Dealer[];
@@ -90,6 +93,8 @@ export default function CrmAdminPortal({
   // Live Selected Dealer's Stock and Transfers
   const [dealerInventory, setDealerInventory] = useState<any[]>([]);
   const [dealerTransfers, setDealerTransfers] = useState<any[]>([]);
+  const [dealerSales, setDealerSales] = useState<any[]>([]);
+  const [dealerServiceInvoices, setDealerServiceInvoices] = useState<any[]>([]);
   const [loadingDealerData, setLoadingDealerData] = useState(false);
 
   // Auto-sync interval to pull updates live every 12 seconds so edits are visible instantly
@@ -103,7 +108,7 @@ export default function CrmAdminPortal({
     return () => clearInterval(interval);
   }, [activeSubTab, onPullDatabase]);
 
-  // Fetch live stock and transfers from Supabase whenever the selected dealer changes
+  // Fetch live stock, transfers, sales, and service invoices from Supabase whenever the selected dealer changes
   React.useEffect(() => {
     if (!selectedDealerId) return;
 
@@ -120,7 +125,6 @@ export default function CrmAdminPortal({
           .eq('dealer_id', selectedDealerId);
 
         // 2. Fetch logistics transfers involving this dealer
-        // Either receiver_id matches, or sender matches dealer's name/code
         let transfersQuery = supabase
           .from('dms_inventory_transfers')
           .select('*');
@@ -132,6 +136,144 @@ export default function CrmAdminPortal({
         }
 
         const { data: trsfData, error: trsfErr } = await transfersQuery.order('date', { ascending: false });
+
+        // 3. Fetch retail sales and their line items
+        let salesData: any[] = [];
+        try {
+          const { data: sData, error: sErr } = await supabase
+            .from('dms_sales')
+            .select('*')
+            .eq('dealer_id', selectedDealerId)
+            .order('date', { ascending: false });
+            
+          if (!sErr && sData && sData.length > 0) {
+            const { data: sItems } = await supabase
+              .from('dms_sale_items')
+              .select('*')
+              .in('sale_id', sData.map(s => s.id));
+              
+            salesData = sData.map(s => ({
+              id: s.id,
+              dealerId: s.dealer_id,
+              invoiceNo: s.invoice_no,
+              customerName: s.customer_name,
+              customerPhone: s.customer_phone,
+              totalAmount: Number(s.total_amount),
+              paymentMethod: s.payment_method,
+              date: s.date,
+              salespersonId: s.salesperson_id,
+              salespersonName: s.salesperson_name,
+              modelNo: s.model_no,
+              location: s.location,
+              productDesc: s.product_desc,
+              hsnNo: s.hsn_no,
+              chassisNo: s.chassis_no,
+              motorNo: s.motor_no,
+              batteryNo: s.battery_no,
+              batteryWarranty: s.battery_warranty,
+              batteryCapacity: s.battery_capacity,
+              vehicleWarranty: s.vehicle_warranty,
+              gstNo: s.gst_no,
+              leadSource: s.lead_source,
+              items: sItems 
+                ? sItems.filter(item => item.sale_id === s.id).map(item => ({
+                    itemId: item.item_id,
+                    name: item.name,
+                    quantity: Number(item.quantity),
+                    pricePerUnit: Number(item.price_per_unit)
+                  }))
+                : []
+            }));
+          } else if (sData) {
+            salesData = sData.map(s => ({
+              id: s.id,
+              dealerId: s.dealer_id,
+              invoiceNo: s.invoice_no,
+              customerName: s.customer_name,
+              customerPhone: s.customer_phone,
+              totalAmount: Number(s.total_amount),
+              paymentMethod: s.payment_method,
+              date: s.date,
+              salespersonId: s.salesperson_id,
+              salespersonName: s.salesperson_name,
+              modelNo: s.model_no,
+              location: s.location,
+              productDesc: s.product_desc,
+              hsnNo: s.hsn_no,
+              chassisNo: s.chassis_no,
+              motorNo: s.motor_no,
+              batteryNo: s.battery_no,
+              batteryWarranty: s.battery_warranty,
+              batteryCapacity: s.battery_capacity,
+              vehicleWarranty: s.vehicle_warranty,
+              gstNo: s.gst_no,
+              leadSource: s.lead_source,
+              items: []
+            }));
+          }
+        } catch (e) {
+          console.warn("Failed to fetch sales in CRM:", e);
+        }
+
+        // 4. Fetch service invoices and their items
+        let serviceInvoicesData: any[] = [];
+        try {
+          const { data: sInvData, error: sInvErr } = await supabase
+            .from('dms_service_invoices')
+            .select('*')
+            .eq('dealer_id', selectedDealerId)
+            .order('date', { ascending: false });
+            
+          if (!sInvErr && sInvData && sInvData.length > 0) {
+            const { data: sInvItems } = await supabase
+              .from('dms_service_invoice_items')
+              .select('*')
+              .in('service_invoice_id', sInvData.map(s => s.id));
+              
+            serviceInvoicesData = sInvData.map(s => ({
+              id: s.id,
+              dealerId: s.dealer_id,
+              invoiceNo: s.invoice_no,
+              customerName: s.customer_name,
+              customerPhone: s.customer_phone,
+              location: s.location,
+              date: s.date,
+              labourCharges: Number(s.labour_charges),
+              paymentMethod: s.payment_method,
+              leadSource: s.lead_source,
+              enableGst: s.enable_gst !== false,
+              productDescription: s.product_description,
+              totalAmount: Number(s.total_amount),
+              products: sInvItems 
+                ? sInvItems.filter(item => item.service_invoice_id === s.id).map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: Number(item.price),
+                    quantity: Number(item.quantity)
+                  }))
+                : []
+            }));
+          } else if (sInvData) {
+            serviceInvoicesData = sInvData.map(s => ({
+              id: s.id,
+              dealerId: s.dealer_id,
+              invoiceNo: s.invoice_no,
+              customerName: s.customer_name,
+              customerPhone: s.customer_phone,
+              location: s.location,
+              date: s.date,
+              labourCharges: Number(s.labour_charges),
+              paymentMethod: s.payment_method,
+              leadSource: s.lead_source,
+              enableGst: s.enable_gst !== false,
+              productDescription: s.product_description,
+              totalAmount: Number(s.total_amount),
+              products: []
+            }));
+          }
+        } catch (e) {
+          console.warn("Failed to fetch service invoices in CRM:", e);
+        }
 
         if (isMounted) {
           if (!invErr && invData) {
@@ -145,6 +287,9 @@ export default function CrmAdminPortal({
           } else {
             setDealerTransfers([]);
           }
+
+          setDealerSales(salesData);
+          setDealerServiceInvoices(serviceInvoicesData);
         }
       } catch (err) {
         console.warn("Failed to fetch live dealer data from Supabase:", err);
@@ -225,6 +370,18 @@ CREATE TABLE IF NOT EXISTS public.dms_dealers (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Force-add compliance columns if the table dms_dealers already existed without them
+ALTER TABLE public.dms_dealers ADD COLUMN IF NOT EXISTS company_name TEXT;
+ALTER TABLE public.dms_dealers ADD COLUMN IF NOT EXISTS incorporation_no TEXT;
+ALTER TABLE public.dms_dealers ADD COLUMN IF NOT EXISTS dba_name TEXT;
+ALTER TABLE public.dms_dealers ADD COLUMN IF NOT EXISTS legal_structure TEXT DEFAULT '';
+ALTER TABLE public.dms_dealers ADD COLUMN IF NOT EXISTS ownership_details TEXT;
+ALTER TABLE public.dms_dealers ADD COLUMN IF NOT EXISTS registered_address TEXT;
+ALTER TABLE public.dms_dealers ADD COLUMN IF NOT EXISTS document_pan JSONB;
+ALTER TABLE public.dms_dealers ADD COLUMN IF NOT EXISTS document_gst JSONB;
+ALTER TABLE public.dms_dealers ADD COLUMN IF NOT EXISTS document_shop_license JSONB;
+ALTER TABLE public.dms_dealers ADD COLUMN IF NOT EXISTS document_trade_license JSONB;
 
 -- EMPLOYEES DIRECTORY (Dealers staff directory)
 CREATE TABLE IF NOT EXISTS public.dms_employees (
@@ -386,6 +543,69 @@ CREATE TABLE IF NOT EXISTS public.dms_inventory_transfers (
     battery_no TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- =========================================================================
+-- 3. COMPATIBILITY VIEWS FOR EXTERNAL CRM SYSTEMS (crm.axigearelectric.com)
+-- =========================================================================
+
+-- Safely rename legacy tables if they exist to prevent "is not a view" error and preserve existing data
+ALTER TABLE IF EXISTS public.service_invoices RENAME TO service_invoices_backup;
+ALTER TABLE IF EXISTS public.spares RENAME TO spares_backup;
+ALTER TABLE IF EXISTS public.inventory RENAME TO inventory_backup;
+
+-- Safe clean up of views if they already exist
+DROP VIEW IF EXISTS public.service_invoices CASCADE;
+DROP VIEW IF EXISTS public.spares CASCADE;
+DROP VIEW IF EXISTS public.inventory CASCADE;
+
+-- Compatibility view for service_invoices table mapping to dms_service_invoices
+CREATE OR REPLACE VIEW public.service_invoices AS
+SELECT 
+    id,
+    dealer_id,
+    invoice_no,
+    customer_name,
+    customer_phone,
+    location,
+    date,
+    labour_charges,
+    payment_method,
+    lead_source,
+    enable_gst,
+    product_description AS product,
+    product_description,
+    total_amount,
+    display_splits_in_invoice,
+    created_at
+FROM public.dms_service_invoices;
+
+-- Compatibility view for spares table mapping to dms_inventory_items
+CREATE OR REPLACE VIEW public.spares AS
+SELECT 
+    id,
+    dealer_id,
+    name AS product,
+    sku,
+    quantity AS unit,
+    price,
+    location,
+    last_updated
+FROM public.dms_inventory_items
+WHERE category IN ('spares', 'spare', 'part');
+
+-- Compatibility view for inventory table mapping to dms_inventory_items
+CREATE OR REPLACE VIEW public.inventory AS
+SELECT 
+    id,
+    dealer_id,
+    name,
+    sku,
+    category,
+    quantity,
+    price,
+    location,
+    last_updated
+FROM public.dms_inventory_items;
 `;
 
   const copyToClipboard = () => {
@@ -1187,6 +1407,130 @@ CREATE TABLE IF NOT EXISTS public.dms_inventory_transfers (
                                 <tr>
                                   <td colSpan={4} className="py-6 text-center text-gray-400 italic text-[10px]">
                                     No logged transport movements or returns in queue.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Live Retail Sales Ledger */}
+                    <div className="space-y-3 pt-3 border-t border-gray-150">
+                      <span className="text-gray-900 font-extrabold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <DollarSign className="w-4 h-4 text-emerald-700" />
+                        <span>Live Franchise Retail Sales ({dealerSales.length})</span>
+                        {loadingDealerData && (
+                          <span className="text-[10px] text-gray-400 font-normal animate-pulse">(fetching sales...)</span>
+                        )}
+                      </span>
+
+                      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden text-[11px] font-sans">
+                        <div className="max-h-[160px] overflow-y-auto">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b bg-gray-50 text-gray-400 font-mono text-[8px] uppercase font-black sticky top-0 bg-white">
+                                <th className="py-2 px-3 text-left">Invoice No / Date</th>
+                                <th className="py-2 px-3 text-left">Customer / Salesperson</th>
+                                <th className="py-2 px-3 text-right">Total Value</th>
+                                <th className="py-2 px-3 text-right">Invoice</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y text-gray-700">
+                              {dealerSales.map((sale: any) => (
+                                <tr key={sale.id} className="hover:bg-gray-50/50">
+                                  <td className="py-2 px-3">
+                                    <p className="font-bold text-gray-950 text-[10px]">{sale.invoiceNo}</p>
+                                    <p className="text-[9px] font-mono text-gray-400 font-bold">{sale.date}</p>
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    <p className="font-bold text-gray-800 text-[10.5px]">{sale.customerName}</p>
+                                    <p className="text-[9px] text-gray-400 font-mono">By: {sale.salespersonName || 'N/A'}</p>
+                                  </td>
+                                  <td className="py-2 px-3 text-right font-mono font-bold text-emerald-800">
+                                    ₹{Number(sale.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  </td>
+                                  <td className="py-2 px-3 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => downloadInvoiceHTML(sale, 'sale')}
+                                      className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold py-1 px-2 rounded text-[9px] uppercase tracking-wide cursor-pointer border border-emerald-200 transition inline-flex items-center gap-0.5"
+                                      title="Download/Print PDF tax invoice"
+                                    >
+                                      <CloudDownload className="w-2.5 h-2.5 text-emerald-700" />
+                                      <span>Invoice</span>
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                              {dealerSales.length === 0 && (
+                                <tr>
+                                  <td colSpan={4} className="py-6 text-center text-gray-400 italic text-[10px]">
+                                    No recorded retail vehicle or spares sales found.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Live Workshop Service Ledger */}
+                    <div className="space-y-3 pt-3 border-t border-gray-150">
+                      <span className="text-gray-900 font-extrabold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <Wrench className="w-4 h-4 text-indigo-700" />
+                        <span>Live Franchise Workshop Jobs ({dealerServiceInvoices.length})</span>
+                        {loadingDealerData && (
+                          <span className="text-[10px] text-gray-400 font-normal animate-pulse">(fetching jobs...)</span>
+                        )}
+                      </span>
+
+                      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden text-[11px] font-sans">
+                        <div className="max-h-[160px] overflow-y-auto">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b bg-gray-50 text-gray-400 font-mono text-[8px] uppercase font-black sticky top-0 bg-white">
+                                <th className="py-2 px-3 text-left">Invoice No / Date</th>
+                                <th className="py-2 px-3 text-left">Customer / Service Type</th>
+                                <th className="py-2 px-3 text-right">Total Value</th>
+                                <th className="py-2 px-3 text-right">Invoice</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y text-gray-700">
+                              {dealerServiceInvoices.map((inv: any) => (
+                                <tr key={inv.id} className="hover:bg-gray-50/50">
+                                  <td className="py-2 px-3">
+                                    <p className="font-bold text-gray-950 text-[10px]">{inv.invoiceNo}</p>
+                                    <p className="text-[9px] font-mono text-gray-400 font-bold">{inv.date}</p>
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    <p className="font-bold text-gray-800 text-[10.5px]">{inv.customerName}</p>
+                                    <p className="text-[9px] text-gray-400 font-mono truncate max-w-[150px]" title={inv.productDescription}>
+                                      {inv.productDescription || 'General Service'}
+                                    </p>
+                                  </td>
+                                  <td className="py-2 px-3 text-right font-mono font-bold text-indigo-800">
+                                    ₹{Number(inv.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                  </td>
+                                  <td className="py-2 px-3 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => downloadInvoiceHTML(inv, 'service')}
+                                      className="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold py-1 px-2 rounded text-[9px] uppercase tracking-wide cursor-pointer border border-indigo-200 transition inline-flex items-center gap-0.5"
+                                      title="Download/Print PDF tax invoice"
+                                    >
+                                      <CloudDownload className="w-2.5 h-2.5 text-indigo-700" />
+                                      <span>Invoice</span>
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                              {dealerServiceInvoices.length === 0 && (
+                                <tr>
+                                  <td colSpan={4} className="py-6 text-center text-gray-400 italic text-[10px]">
+                                    No recorded service invoices or workshop repair tickets found.
                                   </td>
                                 </tr>
                               )}

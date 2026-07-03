@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Sale, InventoryItem, Employee, Dealer, ServiceInvoice, ServiceInvoiceItem } from '../types';
 import { saveServiceInvoiceToDb } from '../lib/supabase';
+import { downloadCSV, downloadInvoiceHTML } from '../utils/csvHelper';
 
 export const SERVICE_PRODUCTS_PRESETS = [
   { name: 'Lithium Battery Pack Refurbishing', price: 12000 },
@@ -527,14 +528,24 @@ export default function SalesManager({
               <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-400" />
             </div>
 
-            <button
-              id="projects-add-sale-btn"
-              onClick={() => setIsAddSaleOpen(true)}
-              className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-850 text-white font-bold py-2 px-5 rounded-lg text-xs tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Add sale</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => downloadCSV(filteredProjects, 'Retail_Sales_Ledger')}
+                className="w-full sm:w-auto bg-white border border-gray-200 text-gray-750 font-bold py-2 px-4 rounded-lg text-xs tracking-wide hover:border-emerald-600 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Export Sales CSV</span>
+              </button>
+              
+              <button
+                id="projects-add-sale-btn"
+                onClick={() => setIsAddSaleOpen(true)}
+                className="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-850 text-white font-bold py-2 px-5 rounded-lg text-xs tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Add sale</span>
+              </button>
+            </div>
           </div>
 
           {/* Projects List table */}
@@ -608,11 +619,11 @@ export default function SalesManager({
           {/* Import/Export block */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col md:flex-row items-center gap-3">
             <button
-              onClick={() => alert('Assisting pipeline template CSV loaded into system files')}
-              className="flex items-center gap-1.5 bg-white border text-gray-700 py-1.5 px-3 rounded-lg text-xs font-semibold hover:border-emerald-600 transition-colors"
+              onClick={() => downloadCSV(estimations, 'Pipeline_Estimations')}
+              className="flex items-center gap-1.5 bg-white border text-gray-700 py-1.5 px-3 rounded-lg text-xs font-semibold hover:border-emerald-600 transition-colors cursor-pointer"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-              <span>Import/Export Estimations</span>
+              <Download className="w-4 h-4 text-emerald-600" />
+              <span>Export Estimations CSV</span>
             </button>
             <span className="text-[10px] text-gray-400 font-sans italic md:ml-auto">
               Pipeline estimations can be exported as standard XLSX sheets incorporating multi-payment splits records.
@@ -906,11 +917,11 @@ export default function SalesManager({
               </button>
               <button
                 type="button"
-                onClick={() => alert('Exporting Service Invoices Excel datasheet...')}
-                className="flex items-center gap-1.5 bg-white border text-gray-700 py-1.5 px-3 rounded-lg text-xs font-semibold hover:border-emerald-600 transition-colors"
+                onClick={() => downloadCSV(serviceInvoices, 'Service_Invoices_Report')}
+                className="flex items-center gap-1.5 bg-white border text-gray-700 py-1.5 px-3 rounded-lg text-xs font-semibold hover:border-emerald-600 transition-colors cursor-pointer"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Export Excel</span>
+                <Download className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Export Service Invoices CSV</span>
               </button>
               <span className="text-[10px] text-gray-400 font-sans italic md:ml-auto">
                 CSV/Excel files must have headers matching column names (e.g., serviceInvoiceNo, customerName, etc.)
@@ -1654,8 +1665,8 @@ export default function SalesManager({
 
       {/* --- REUSABLE GST TAX INVOICE MODAL WINDOW (IMAGE 4 FORMAT) --- */}
       {viewingTaxInvoice && (
-        <div className="fixed inset-0 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-4xl w-full border border-gray-300 shadow-2xl relative flex flex-col text-gray-800 font-sans my-8">
+        <div className="invoice-print-modal-overlay fixed inset-0 bg-black/65 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="invoice-print-modal-content bg-white rounded-xl max-w-4xl w-full border border-gray-300 shadow-2xl relative flex flex-col text-gray-800 font-sans my-8">
             
             {/* Modal Controls (Sticky / non-printing) */}
             <div className="bg-gray-150 p-4 border-b flex justify-between items-center print:hidden rounded-t-xl">
@@ -1663,17 +1674,24 @@ export default function SalesManager({
                 <Printer className="w-4 h-4 text-emerald-600 animate-pulse" />
                 <span>GST Tax Invoice Viewer (AXIGEAR-SYSTEM)</span>
               </span>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => downloadInvoiceHTML(viewingTaxInvoice.data, viewingTaxInvoice.type)}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs tracking-wide flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Offline HTML</span>
+                </button>
                 <button
                   onClick={() => window.print()}
-                  className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-850 text-white font-bold rounded-lg text-xs tracking-wide flex items-center gap-1 transition-all cursor-pointer shadow-sm animate-bounce"
+                  className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-850 text-white font-bold rounded-lg text-xs tracking-wide flex items-center gap-1 transition-all cursor-pointer shadow-sm"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print / Save PDF</span>
                 </button>
                 <button
                   onClick={() => setViewingTaxInvoice(null)}
-                  className="p-1 px-3 bg-gray-100 hover:bg-gray-250 rounded border text-gray-550 cursor-pointer text-xs"
+                  className="p-1 px-3 bg-gray-100 hover:bg-gray-200 rounded border text-gray-550 cursor-pointer text-xs font-bold"
                 >
                   Close
                 </button>

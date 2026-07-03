@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { InventoryItem, Dealer } from '../types';
 import { supabase } from '../lib/supabase';
+import { downloadCSV } from '../utils/csvHelper';
 
 interface InventoryManagerProps {
   currentDealer: Dealer;
@@ -412,7 +413,7 @@ export default function InventoryManager({
         name: item.vehicleModel,
         quantity: Number(retQty),
         sender: currentDealer.name,
-        receiver_id: currentDealer.id,
+        receiver_id: null,
         status: 'Returned to HQ',
         date: new Date().toISOString().split('T')[0],
         chassis_no: item.chassisNo || null,
@@ -468,7 +469,7 @@ export default function InventoryManager({
         name: item.partName,
         quantity: Number(retQty),
         sender: currentDealer.name,
-        receiver_id: currentDealer.id,
+        receiver_id: null,
         status: 'Returned to HQ',
         date: new Date().toISOString().split('T')[0],
         chassis_no: null,
@@ -557,12 +558,36 @@ export default function InventoryManager({
 
   const handleDeleteVehicle = (id: string) => {
     if (confirm('Are you sure you want to delete this vehicle inventory record?')) {
+      const v = vehicles.find(x => x.id === id);
+      if (v) {
+        const cleanSku = (v.modelNo || '').trim().toLowerCase();
+        const cleanName = (v.vehicleModel || '').trim().toLowerCase();
+        const existingDbItem = inventory.find(i => {
+          const iSku = (i.sku || '').trim().toLowerCase();
+          const iName = (i.name || '').trim().toLowerCase();
+          return (cleanSku && iSku === cleanSku) || iName === cleanName;
+        });
+        if (existingDbItem) {
+          onDeleteInventory(existingDbItem.id);
+        }
+      }
       setVehicles(vehicles.filter(x => x.id !== id));
     }
   };
 
   const handleDeleteSpare = (id: string) => {
     if (confirm('Are you sure you want to delete this spare part record?')) {
+      const s = spares.find(x => x.id === id);
+      if (s) {
+        const cleanName = (s.partName || '').trim().toLowerCase();
+        const existingDbItem = inventory.find(i => {
+          const iName = (i.name || '').trim().toLowerCase();
+          return iName === cleanName;
+        });
+        if (existingDbItem) {
+          onDeleteInventory(existingDbItem.id);
+        }
+      }
       setSpares(spares.filter(x => x.id !== id));
     }
   };
@@ -712,7 +737,7 @@ export default function InventoryManager({
             </div>
             
             <button
-              onClick={() => alert('Excel/CSV vehicles dataset exported successfully.')}
+              onClick={() => downloadCSV(vehicles, 'Vehicles_Inventory')}
               className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 py-1.5 px-3 rounded-lg text-xs font-bold hover:border-emerald-600 transition-colors"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
@@ -781,7 +806,7 @@ export default function InventoryManager({
                                     name: v.vehicleModel,
                                     quantity: 1,
                                     sender: currentDealer.name,
-                                    receiver_id: currentDealer.id,
+                                    receiver_id: null,
                                     status: 'Returned to HQ',
                                     date: new Date().toISOString().split('T')[0],
                                     chassis_no: v.chassisNo || null,
@@ -859,7 +884,7 @@ export default function InventoryManager({
             </div>
             
             <button
-              onClick={() => alert('Excel/CSV spares dataset exported successfully.')}
+              onClick={() => downloadCSV(spares, 'Spares_Inventory')}
               className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 py-1.5 px-3 rounded-lg text-xs font-bold hover:border-emerald-600 transition-colors"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
@@ -916,7 +941,7 @@ export default function InventoryManager({
                                   name: sp.partName,
                                   quantity: 1,
                                   sender: currentDealer.name,
-                                  receiver_id: currentDealer.id,
+                                  receiver_id: null,
                                   status: 'Returned to HQ',
                                   date: new Date().toISOString().split('T')[0],
                                   chassis_no: null,

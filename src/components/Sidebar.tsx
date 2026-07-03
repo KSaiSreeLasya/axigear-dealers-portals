@@ -51,11 +51,6 @@ export default function Sidebar({
       badge: isProfileIncomplete ? '!' : undefined,
       badgeColor: 'bg-amber-500 text-white'
     },
-    { 
-      id: 'crmadmin', 
-      name: 'crm.axigearelectric.com', 
-      icon: Globe 
-    },
   ];
 
   return (

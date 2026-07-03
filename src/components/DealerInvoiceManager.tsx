@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Eye, Edit2, Download, Search, AlertCircle, FileSpreadsheet } from 'lucide-react';
+import { Plus, Trash2, Eye, Edit2, Download, Search, AlertCircle, FileSpreadsheet, Printer, X } from 'lucide-react';
 import { Dealer } from '../types';
+import { downloadCSV, downloadInvoiceHTML } from '../utils/csvHelper';
 
 interface InvoiceProductRow {
   product: string;
@@ -38,6 +39,7 @@ interface DealerInvoiceManagerProps {
 
 export default function DealerInvoiceManager({ dealers, currentDealer }: DealerInvoiceManagerProps) {
   const [activeTab, setActiveTab] = useState<'product' | 'spare'>('product');
+  const [viewingTaxInvoice, setViewingTaxInvoice] = useState<SavedInvoice | null>(null);
 
   // --- Saved Invoices Database synced to localStorage ---
   const [savedInvoices, setSavedInvoices] = useState<SavedInvoice[]>(() => {
@@ -240,8 +242,127 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
     setSavedInvoices(savedInvoices.filter(x => x.id !== id));
   };
 
+  const handlePrintNewTab = (inv: SavedInvoice) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const itemsHtml = inv.items.map((it, i) => {
+        const taxable = it.amount || 0;
+        const gst = it.gstRate || 18;
+        const gstAmt = Math.round(taxable * (gst / 100) * 100) / 100;
+        const total = taxable + gstAmt;
+        return `
+          <tr>
+            <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${i + 1}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;"><strong>${it.product}</strong><br><small style="color: #666;">${it.description || ''}</small></td>
+            <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">8711</td>
+            <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${it.unit}</td>
+            <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">₹${taxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+            <td style="text-align: center; border: 1px solid #ddd; padding: 8px;">${gst}%</td>
+            <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">₹${gstAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+            <td style="text-align: right; border: 1px solid #ddd; padding: 8px;">₹${(total * it.unit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+          </tr>
+        `;
+      }).join('');
+
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Tax Invoice - ${inv.invoiceNumber}</title>
+            <style>
+              body { font-family: sans-serif; color: #111; margin: 40px; }
+              .header { display: flex; justify-content: space-between; border-bottom: 2px solid #15803D; padding-bottom: 15px; margin-bottom: 30px; }
+              .title { font-size: 24px; font-weight: bold; color: #15803D; }
+              .meta { text-align: right; }
+              .grid { display: flex; justify-content: space-between; margin-bottom: 30px; }
+              .col { width: 48%; }
+              .col-title { font-size: 10px; font-weight: bold; color: #999; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 8px; }
+              table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 30px; }
+              th { background-color: #f9f9f9; padding: 8px; font-weight: bold; text-transform: uppercase; border: 1px solid #ddd; }
+              .summary { width: 300px; margin-left: auto; font-size: 11px; }
+              .summary-row { display: flex; justify-content: space-between; padding: 4px 0; }
+              .grand-total { font-size: 13px; font-weight: bold; color: #15803D; border-top: 1px solid #ddd; padding-top: 6px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div>
+                <div class="title">AXIGEAR</div>
+                <div style="font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Dealer Inventory Supply</div>
+              </div>
+              <div class="meta">
+                <div style="font-size: 14px; font-weight: bold;">TAX INVOICE</div>
+                <div style="font-size: 11px; font-weight: bold; margin-top: 4px;">No: ${inv.invoiceNumber}</div>
+                <div style="font-size: 10px; color: #666;">Date: ${inv.invoiceDate}</div>
+              </div>
+            </div>
+            <div class="grid">
+              <div class="col">
+                <div class="col-title">Issuer (Consignor)</div>
+                <div style="font-size: 11px; line-height: 1.5;">
+                  <strong>AXIGEAR PRIVATE LIMITED</strong><br>
+                  Central Distribution Depot, Phase-2<br>
+                  Hyderabad, India<br>
+                  GSTIN: 36ACJFA4386L1ZW
+                </div>
+              </div>
+              <div class="col">
+                <div class="col-title">Recipient (Dealer)</div>
+                <div style="font-size: 11px; line-height: 1.5;">
+                  <strong>${inv.dealerName}</strong><br>
+                  Location: ${inv.location}<br>
+                  Contact: ${inv.contactNo}<br>
+                  Payment Mode: ${inv.paymentMode}
+                </div>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Sl.No</th>
+                  <th>Product/Service Description</th>
+                  <th>HSN</th>
+                  <th>Qty</th>
+                  <th>Unit Taxable</th>
+                  <th>GST Rate</th>
+                  <th>GST Amount</th>
+                  <th>Total Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+            <div class="summary">
+              <div class="summary-row">
+                <span>Taxable Amount:</span>
+                <span>₹${inv.taxableValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div class="summary-row">
+                <span>GST Amount (18%):</span>
+                <span>₹${inv.gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div class="summary-row grand-total">
+                <span>GRAND TOTAL:</span>
+                <span>₹${inv.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+            <script>
+              window.onload = function() {
+                window.print();
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    } else {
+      alert("Popup blocker active! Please allow popups for this site, or click 'Download Offline Invoice' to download the beautifully prepared HTML sheet instead.");
+    }
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto py-2">
+    <>
+      <div className="space-y-6 max-w-7xl mx-auto py-2">
       
       {/* Title */}
       <div>
@@ -575,17 +696,17 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
           <span>Import CSV/Excel</span>
         </button>
         <button
-          onClick={() => alert('Download initiated: Invoice ledger synced')}
+          onClick={() => downloadCSV(savedInvoices.filter(i => i.type === activeTab), `${activeTab === 'product' ? 'Vehicles' : 'Spares'}_Dealer_Invoices`)}
           className="flex items-center gap-1.5 bg-white border text-gray-700 py-1.5 px-3 rounded-lg text-xs font-semibold hover:border-emerald-600 transition-colors"
         >
-          <Plus className="w-4 h-4 text-emerald-600" />
+          <Download className="w-4 h-4 text-emerald-600" />
           <span>Export CSV</span>
         </button>
         <button
-          onClick={() => alert('Excel compilation triggered')}
+          onClick={() => downloadCSV(savedInvoices.filter(i => i.type === activeTab), `${activeTab === 'product' ? 'Vehicles' : 'Spares'}_Dealer_Invoices`)}
           className="flex items-center gap-1.5 bg-white border text-gray-700 py-1.5 px-3 rounded-lg text-xs font-semibold hover:border-emerald-600 transition-colors"
         >
-          <Plus className="w-4 h-4 text-emerald-600" />
+          <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
           <span>Export Excel</span>
         </button>
         <span className="text-[10px] text-gray-400 font-sans italic md:ml-auto">
@@ -626,7 +747,7 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
                   <td className="py-3.5 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <button 
-                        onClick={() => alert(`Reviewing invoice: ${inv.invoiceNumber}\nDealer: ${inv.dealerName}\nTotal Items: ${inv.items.length}\nTotal: ₹${inv.totalAmount}`)}
+                        onClick={() => setViewingTaxInvoice(inv)}
                         className="px-2.5 py-1 bg-gray-50 border hover:bg-gray-100 rounded text-[11px] font-bold text-gray-700 cursor-pointer"
                       >
                         Preview
@@ -655,5 +776,163 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
       </div>
 
     </div>
+
+      {/* --- RETAILER / DEALER TAX INVOICE OVERLAY MODAL --- */}
+      {viewingTaxInvoice && (
+        <div className="fixed inset-0 bg-[#0A0B0D]/55 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-4xl w-full border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col text-gray-800 font-sans">
+            {/* Modal Header Actions */}
+            <div className="bg-gray-50 border-b p-5 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="font-bold text-base text-gray-950 uppercase tracking-wide">Tax Invoice Sheet</h3>
+                <p className="text-gray-450 text-[10px] mt-0.5">Dealer inventory dispatch ledger certificate</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => downloadInvoiceHTML(viewingTaxInvoice, 'dealer_invoice')}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs tracking-wide flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Offline HTML</span>
+                </button>
+                <button
+                  onClick={() => handlePrintNewTab(viewingTaxInvoice)}
+                  className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-850 text-white font-bold rounded-lg text-xs tracking-wide flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print in New Tab</span>
+                </button>
+                <button 
+                  onClick={() => setViewingTaxInvoice(null)}
+                  className="p-1 px-1.5 hover:bg-gray-150 rounded text-gray-550 ml-2"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: Actual visual clean A4 Invoice */}
+            <div className="flex-1 overflow-y-auto p-8 bg-gray-100/40">
+              <div id="printable-gst-invoice-block" className="bg-white rounded-xl border border-gray-250 p-8 shadow-sm space-y-6 max-w-3xl mx-auto">
+                <div className="flex justify-between items-start border-b pb-6">
+                  <div>
+                    <h1 className="text-2xl font-black tracking-tight text-emerald-800">AXIGEAR</h1>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Distribution & Logistics HQ</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase rounded-full border border-emerald-200">GST REGISTERED</span>
+                    <h2 className="text-sm font-black text-gray-950 tracking-tight mt-2.5">TAX INVOICE</h2>
+                    <p className="text-[9px] font-bold text-gray-400 mt-0.5 uppercase">DEALER SUPPLY RECEIPT</p>
+                  </div>
+                </div>
+
+                {/* Sender & Recipient Metadata */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+                  <div className="space-y-1.5 bg-gray-50/55 p-3.5 rounded-lg border">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest border-b pb-1">CONSIGNOR (ISSUER)</p>
+                    <p className="font-extrabold text-gray-900 text-[11px]">AXIGEAR PRIVATE LIMITED</p>
+                    <p className="text-gray-500 leading-relaxed">
+                      Corporate HQ, Phase-2 Tech Depot<br />
+                      Hyderabad, Telangana, 500081<br />
+                      <strong>GSTIN:</strong> 36ACJFA4386L1ZW<br />
+                      <strong>Email:</strong> support@axigear.com
+                    </p>
+                  </div>
+                  <div className="space-y-1.5 bg-gray-50/55 p-3.5 rounded-lg border">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest border-b pb-1">CONSIGNEE (RECIPIENT)</p>
+                    <p className="font-extrabold text-gray-900 text-[11px]">{viewingTaxInvoice.dealerName}</p>
+                    <p className="text-gray-500 leading-relaxed">
+                      Location / Branch: {viewingTaxInvoice.location}<br />
+                      Contact phone: {viewingTaxInvoice.contactNo}<br />
+                      <strong>GST Status:</strong> CGST/SGST Applicable
+                    </p>
+                  </div>
+                </div>
+
+                {/* Secondary Meta Box */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs border-y py-4 my-2">
+                  <div className="space-y-1">
+                    <p className="flex justify-between text-gray-550"><strong className="text-gray-950">Invoice Number:</strong> <span>{viewingTaxInvoice.invoiceNumber}</span></p>
+                    <p className="flex justify-between text-gray-550"><strong className="text-gray-950">Invoice Date:</strong> <span>{viewingTaxInvoice.invoiceDate}</span></p>
+                    <p className="flex justify-between text-gray-550"><strong className="text-gray-950">Payment Mode:</strong> <span className="font-mono uppercase text-emerald-800 font-bold">{viewingTaxInvoice.paymentMode}</span></p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="flex justify-between text-gray-550"><strong className="text-gray-950">PO Number:</strong> <span>{viewingTaxInvoice.poNumber || 'N/A'}</span></p>
+                    <p className="flex justify-between text-gray-550"><strong className="text-gray-950">Due Date:</strong> <span>{viewingTaxInvoice.dueDate || 'N/A'}</span></p>
+                    <p className="flex justify-between text-gray-550"><strong className="text-gray-950">Ship To Address:</strong> <span>{viewingTaxInvoice.shipTo || 'N/A'}</span></p>
+                  </div>
+                </div>
+
+                {/* Line Items Table */}
+                <div className="space-y-2">
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">CONSOLIDATED LINE ITEMS</p>
+                  <div className="overflow-x-auto border rounded-xl">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b bg-gray-50 text-gray-500 font-mono text-[9px] uppercase font-bold text-center">
+                          <th className="py-2.5 px-3 border-r w-12 text-center">Sl.No</th>
+                          <th className="py-2.5 px-3 text-left">Product/Service Description</th>
+                          <th className="py-2.5 px-3">HSN Code</th>
+                          <th className="py-2.5 px-3 w-14">Qty</th>
+                          <th className="py-2.5 px-3 text-right">Unit Taxable</th>
+                          <th className="py-2.5 px-3">GST Rate</th>
+                          <th className="py-2.5 px-3 text-right">GST Amount</th>
+                          <th className="py-2.5 px-3 text-right">Total Value</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y text-center">
+                        {viewingTaxInvoice.items.map((it, idx) => {
+                          const taxable = it.amount || 0;
+                          const gstRate = it.gstRate || 18;
+                          const gstAmount = Math.round(taxable * (gstRate / 100) * 100) / 100;
+                          const totalValue = taxable + gstAmount;
+                          return (
+                            <tr key={idx} className="hover:bg-gray-50/50">
+                              <td className="py-3 px-3 border-r text-center font-mono text-gray-400">{idx + 1}</td>
+                              <td className="py-3 px-3 text-left">
+                                <div className="font-extrabold text-gray-900">{it.product}</div>
+                                <div className="text-[10px] text-gray-400 mt-0.5">{it.description || 'N/A'}</div>
+                              </td>
+                              <td className="py-3 px-3 font-mono text-gray-400">8711</td>
+                              <td className="py-3 px-3 font-mono">{it.unit}</td>
+                              <td className="py-3 px-3 text-right font-mono text-gray-650">₹{taxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td className="py-3 px-3 font-mono">{gstRate}%</td>
+                              <td className="py-3 px-3 text-right font-mono text-gray-650">₹{gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td className="py-3 px-3 text-right font-bold font-mono text-emerald-800">₹{(totalValue * it.unit).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Totals Summary blocks */}
+                <div className="flex flex-col md:flex-row justify-between items-start gap-4 pt-4 border-t">
+                  <div className="text-[10px] text-gray-400 leading-relaxed max-w-sm">
+                    <strong>T&amp;C:</strong> Goods once supplied under this official Central logistics ledger cannot be returned unless flagged explicitly as Returned to HQ in the pipelines trackers. All disputes are subject to Central Hyderabad Jurisdictional bounds.
+                  </div>
+                  <div className="w-full md:w-80 space-y-2 text-xs font-mono font-semibold">
+                    <div className="flex justify-between text-gray-550">
+                      <span>Subtotal (Taxable):</span>
+                      <span>₹{viewingTaxInvoice.taxableValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-550 pb-2 border-b">
+                      <span>Consolidated GST (18%):</span>
+                      <span>₹{viewingTaxInvoice.gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-black text-gray-950 pt-1">
+                      <span>GRAND TOTAL:</span>
+                      <span className="text-emerald-800">₹{viewingTaxInvoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
