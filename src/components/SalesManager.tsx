@@ -1728,7 +1728,7 @@ export default function SalesManager({
                   <p className="text-gray-500 text-[10px]">
                     Store Address: {currentDealer.location}<br />
                     Dealer License Ref No: {currentDealer.code}<br />
-                    Authorized Billing Point | State: Karnataka | Code: 29
+                    Authorized Billing Point | State: Telangana | Code: 36
                   </p>
                   <p className="font-mono font-bold text-[9.5px] text-gray-800">
                     FRANCHISE REGISTERED GSTIN: {viewingTaxInvoice.type === 'sale' && viewingTaxInvoice.data.gstNo ? viewingTaxInvoice.data.gstNo : '29AXGPI8174C3ZD'}
@@ -1756,7 +1756,7 @@ export default function SalesManager({
                 </div>
                 <div>
                   <span className="text-gray-400 text-[9px] font-bold uppercase block">State of Supply</span>
-                  <p className="font-semibold text-gray-700 mt-0.5">Karnataka (Code: 29)</p>
+                  <p className="font-semibold text-gray-700 mt-0.5">Telangana (Code: 36)</p>
                 </div>
                 <div>
                   <span className="text-gray-400 text-[9px] font-bold uppercase block">Lead Attribution</span>
