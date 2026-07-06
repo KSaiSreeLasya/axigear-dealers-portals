@@ -506,7 +506,7 @@ export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 
             <strong>AXIGEAR PRIVATE LIMITED</strong><br>
             Corporate HQ, Phase-2 Tech Depot<br>
             Hyderabad, Telangana, 500081<br>
-            GSTIN: 36ACJFA4386L1ZW<br>
+            GSTIN: 36ABLFR7464F1ZR<br>
             Contact: support@axigear.com
           </div>
         </td>

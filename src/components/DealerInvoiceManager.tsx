@@ -302,7 +302,7 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
                   <strong>AXIGEAR PRIVATE LIMITED</strong><br>
                   Central Distribution Depot, Phase-2<br>
                   Hyderabad, India<br>
-                  GSTIN: 36ACJFA4386L1ZW
+                  GSTIN: 36ABLFR7464F1ZR
                 </div>
               </div>
               <div class="col">
@@ -834,7 +834,7 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
                     <p className="text-gray-500 leading-relaxed">
                       Corporate HQ, Phase-2 Tech Depot<br />
                       Hyderabad, Telangana, 500081<br />
-                      <strong>GSTIN:</strong> 36ACJFA4386L1ZW<br />
+                      <strong>GSTIN:</strong> 36ABLFR7464F1ZR<br />
                       <strong>Email:</strong> support@axigear.com
                     </p>
                   </div>
