@@ -36,6 +36,8 @@ interface SalesManagerProps {
   sales: Sale[];
   employees: Employee[];
   onAddSale: (sale: Omit<Sale, 'id' | 'dealerId' | 'invoiceNo' | 'date'> & { date?: string; invoiceNo?: string }) => void;
+  onDeleteSale?: (id: string) => void;
+  onEditSale?: (sale: Sale) => void;
   onDeductInventoryStock: (itemId: string, quantity: number) => void;
 }
 
@@ -66,6 +68,8 @@ export default function SalesManager({
   sales,
   employees,
   onAddSale,
+  onDeleteSale,
+  onEditSale,
   onDeductInventoryStock
 }: SalesManagerProps) {
   const [activeSubTab, setActiveSubTab] = useState<'projects' | 'pipeline' | 'serviceInvoices'>('projects');
@@ -270,10 +274,12 @@ export default function SalesManager({
 
   const handleDeleteSale = (id: string) => {
     if (confirm('Are you sure you want to delete this sale?')) {
-      // This would need to be handled by the parent component
-      // For now, we'll just notify that the operation would delete the sale
-      console.log('Delete sale:', id);
-      alert('Delete functionality handled by parent App component');
+      if (onDeleteSale) {
+        onDeleteSale(id);
+      } else {
+        console.log('Delete sale:', id);
+        alert('Delete functionality handled by parent App component');
+      }
     }
   };
 
@@ -704,7 +710,14 @@ export default function SalesManager({
                           </button>
                           <a
                             href="#"
-                            onClick={(e) => { e.preventDefault(); alert('Edit functionality handled by parent component'); }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (onEditSale) {
+                                onEditSale(sale);
+                              } else {
+                                alert('Edit functionality handled by parent component');
+                              }
+                            }}
                             className="px-2.5 py-1 text-blue-600 hover:bg-blue-50 rounded text-[10px] font-bold cursor-pointer transition-colors"
                             title="Edit sale"
                           >

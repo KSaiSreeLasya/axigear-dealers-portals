@@ -919,6 +919,11 @@ export async function saveSaleToDb(s: Sale) {
   return { error: lineErr };
 }
 
+export async function deleteSaleFromDb(saleId: string) {
+  await supabase.from('dms_sale_items').delete().eq('sale_id', saleId);
+  return supabase.from('dms_sales').delete().eq('id', saleId);
+}
+
 export async function saveServiceTicketToDb(t: ServiceTicket) {
   const resolvedDealerId = await ensureDealerExistsInDb(t.dealerId);
   return supabase.from('dms_service_tickets').upsert({

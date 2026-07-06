@@ -33,6 +33,7 @@ import {
   saveEmployeeToDb,
   saveAttendanceRecordToDb,
   saveSaleToDb,
+  deleteSaleFromDb,
   saveServiceTicketToDb,
   saveServiceMessageToDb,
   testConnection,
@@ -412,6 +413,16 @@ export default function App() {
     saveSaleToDb(newSale).catch(console.error);
   };
 
+  const handleDeleteSale = (id: string) => {
+    setSales(prev => prev.filter(s => s.id !== id));
+    deleteSaleFromDb(id).catch(console.error);
+  };
+
+  const handleEditSale = (sale: Sale) => {
+    setSales(prev => prev.map(s => s.id === sale.id ? sale : s));
+    saveSaleToDb(sale).catch(console.error);
+  };
+
   // --- Employee Directory ---
   const handleAddEmployee = (empData: Omit<Employee, 'id' | 'dealerId'>) => {
     if (!currentDealer) return;
@@ -549,12 +560,14 @@ export default function App() {
         );
       case 'sales':
         return (
-          <SalesManager 
+          <SalesManager
             currentDealer={currentDealer}
             inventory={inventory}
             sales={sales}
             employees={employees}
             onAddSale={handleAddSale}
+            onDeleteSale={handleDeleteSale}
+            onEditSale={handleEditSale}
             onDeductInventoryStock={handleDeductInventoryStock}
           />
         );
