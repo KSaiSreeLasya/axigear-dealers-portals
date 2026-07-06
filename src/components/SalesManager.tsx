@@ -210,7 +210,13 @@ export default function SalesManager({
   const [saleAmount, setSaleAmount] = useState(0);
   const [salePaymentMode, setSalePaymentMode] = useState<'Cash' | 'Card' | 'UPI' | 'Bank Transfer'>('Cash');
   const [saleLeadSource, setSaleLeadSource] = useState('');
-  const [saleGstNo, setSaleGstNo] = useState('36ACJFA4386L1ZW');
+  const [saleGstNo, setSaleGstNo] = useState(() => {
+    const dealerName = currentDealer.name?.toLowerCase() || '';
+    if (dealerName.includes('zen') || dealerName.includes('zenz')) {
+      return '36ABLFR7464F1ZR';
+    }
+    return '36ACJFA4386L1ZW';
+  });
   const [saleDisplaySplits, setSaleDisplaySplits] = useState(false);
   const [saleSplits, setSaleSplits] = useState<Array<{ amount: number; paymentMethod: string; date: string }>>([
     { amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }
@@ -1731,7 +1737,13 @@ export default function SalesManager({
                     Authorized Billing Point | State: Telangana | Code: 36
                   </p>
                   <p className="font-mono font-bold text-[9.5px] text-gray-800">
-                    FRANCHISE REGISTERED GSTIN: {viewingTaxInvoice.type === 'sale' && viewingTaxInvoice.data.gstNo ? viewingTaxInvoice.data.gstNo : '29AXGPI8174C3ZD'}
+                    FRANCHISE REGISTERED GSTIN: {(() => {
+                      const dealerName = currentDealer.name?.toLowerCase() || '';
+                      if (dealerName.includes('zen') || dealerName.includes('zenz')) {
+                        return '36ABLFR7464F1ZR';
+                      }
+                      return viewingTaxInvoice.type === 'sale' && viewingTaxInvoice.data.gstNo ? viewingTaxInvoice.data.gstNo : '29AXGPI8174C3ZD';
+                    })()}
                   </p>
                 </div>
               </div>
