@@ -1709,14 +1709,16 @@ export default function SalesManager({
               {/* Company & Dealer metadata details double column header */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-gray-400 pb-4">
                 <div className="space-y-1">
-                  <h4 className="font-extrabold text-base tracking-tight text-gray-950">AXIGEAR ELECTRIC PRIVATE LIMITED</h4>
+                  <h4 className="font-extrabold text-base tracking-tight text-gray-950">AXIGEAR LOUNGE LLP</h4>
                   <p className="text-gray-500 text-[10px]">
-                    Registered Office: H-24, Sector 63, Noida, Uttar Pradesh, 201301<br />
-                    Central Support Email: billing@axigearelectric.com<br />
-                    State: Uttar Pradesh | Code: 09
+                    Registered Office: SY 02, PLOT NO.148, MYTHRI NAGAR, MADINAGUDA
+
+                    HYDERABAD, TELANGANA, INDIA 500049<br />
+                    
+                    State:TELANGANA | Code: 36
                   </p>
                   <p className="font-mono text-[9px] font-bold bg-emerald-50 text-emerald-800 inline-block px-1.5 py-0.5 rounded border border-emerald-200">
-                    CENTRAL GSTIN: 09AAHCA9184B1Z5
+                     GSTIN: 36ACJFA4386L1ZW
                   </p>
                 </div>
 
@@ -1726,7 +1728,7 @@ export default function SalesManager({
                   <p className="text-gray-500 text-[10px]">
                     Store Address: {currentDealer.location}<br />
                     Dealer License Ref No: {currentDealer.code}<br />
-                    Authorized Billing Point | State: Karnataka | Code: 29
+                    Authorized Billing Point | State: Telangana | Code: 36
                   </p>
                   <p className="font-mono font-bold text-[9.5px] text-gray-800">
                     FRANCHISE REGISTERED GSTIN: {viewingTaxInvoice.type === 'sale' && viewingTaxInvoice.data.gstNo ? viewingTaxInvoice.data.gstNo : '29AXGPI8174C3ZD'}
@@ -1754,7 +1756,7 @@ export default function SalesManager({
                 </div>
                 <div>
                   <span className="text-gray-400 text-[9px] font-bold uppercase block">State of Supply</span>
-                  <p className="font-semibold text-gray-700 mt-0.5">Karnataka (Code: 29)</p>
+                  <p className="font-semibold text-gray-700 mt-0.5">Telangana (Code: 36)</p>
                 </div>
                 <div>
                   <span className="text-gray-400 text-[9px] font-bold uppercase block">Lead Attribution</span>
@@ -1964,7 +1966,7 @@ export default function SalesManager({
                   * Dynamic billing audit index: {viewingTaxInvoice.data.id} • Registered server secure point
                 </div>
                 <div className="text-right space-y-4">
-                  <span className="text-gray-400 font-bold block text-[9px]">For AXIGEAR ELECTRIC PRIVATE LIMITED</span>
+                  <span className="text-gray-400 font-bold block text-[9px]">For AXIGEAR LOUNGE LLP</span>
                   <div className="h-6"></div>
                   <span className="border-t border-gray-400 pt-1 px-4 inline-block font-extrabold text-gray-900 text-[10px]">Authorized Signatory</span>
                 </div>
