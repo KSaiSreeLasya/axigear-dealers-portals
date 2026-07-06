@@ -398,7 +398,7 @@ export default function App() {
     if (!currentDealer) return;
 
     const dealerSalesCount = sales.filter(s => s.dealerId === currentDealer.id).length + 1;
-    const invoiceNo = saleData.invoiceNo || `AAV-RRE-${currentDealer.code}-${String(dealerSalesCount).padStart(3, '0')}`;
+    const invoiceNo = saleData.invoiceNo || `AAV-RRE-ZEN-Z-${String(dealerSalesCount).padStart(3, '0')}`;
 
     const newSale: Sale = {
       ...saleData,
