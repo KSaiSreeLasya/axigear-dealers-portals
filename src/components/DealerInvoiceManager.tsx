@@ -40,6 +40,7 @@ interface DealerInvoiceManagerProps {
 export default function DealerInvoiceManager({ dealers, currentDealer }: DealerInvoiceManagerProps) {
   const [activeTab, setActiveTab] = useState<'product' | 'spare'>('product');
   const [viewingTaxInvoice, setViewingTaxInvoice] = useState<SavedInvoice | null>(null);
+  const [editingInvoice, setEditingInvoice] = useState<SavedInvoice | null>(null);
 
   // --- Saved Invoices Database synced to localStorage ---
   const [savedInvoices, setSavedInvoices] = useState<SavedInvoice[]>(() => {
@@ -118,16 +119,39 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
     { product: '', description: '', unit: 1, amount: 0, gstRate: 18 }
   ]);
 
-  // Autofill invoice numbers depending on type tab toggles
-  useEffect(() => {
-    const nextNum = savedInvoices.filter(i => i.type === activeTab).length + 1;
+  // Smart numbering: reuse deleted slots or assign next number
+  const getNextInvoiceNumber = () => {
+    const tabInvoices = savedInvoices.filter(i => i.type === activeTab);
+
+    // Extract all used numbers from invoice numbers like DLR/2026-27/001
+    const usedNumbers = new Set<number>();
+    tabInvoices.forEach(inv => {
+      const match = inv.invoiceNumber.match(/\/(\d{3})$/);
+      if (match) {
+        usedNumbers.add(parseInt(match[1], 10));
+      }
+    });
+
+    // Find first available slot (1, 2, 3, ...)
+    let nextNum = 1;
+    while (usedNumbers.has(nextNum)) {
+      nextNum++;
+    }
+
     const pad = String(nextNum).padStart(3, '0');
     if (activeTab === 'product') {
-      setInvoiceNumber(`DLR/2026-${~~(Math.random()*10)+26}/${pad}`);
+      return `DLR/2026-${~~(Math.random()*10)+26}/${pad}`;
     } else {
-      setInvoiceNumber(`SPARE/2026-${~~(Math.random()*10)+26}/${pad}`);
+      return `SPARE/2026-${~~(Math.random()*10)+26}/${pad}`;
     }
-  }, [activeTab, savedInvoices]);
+  };
+
+  // Autofill invoice numbers depending on type tab toggles
+  useEffect(() => {
+    if (!editingInvoice) {
+      setInvoiceNumber(getNextInvoiceNumber());
+    }
+  }, [activeTab, savedInvoices, editingInvoice]);
 
   // Autofill properties on select dealer
   const handleDealerChange = (id: string) => {
@@ -184,7 +208,7 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
 
   const totals = calculateTotals();
 
-  // Save the invoice
+  // Save or update the invoice
   const handleCreateInvoiceSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -202,28 +226,58 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
       return;
     }
 
-    const newInvoice: SavedInvoice = {
-      id: `saved-dlr-inv-${Math.floor(1000 + Math.random() * 9000)}`,
-      type: activeTab,
-      invoiceNumber,
-      dealerName: dName,
-      contactNo,
-      location,
-      invoiceDate,
-      dueDate,
-      poNumber,
-      sentTo,
-      shipTo,
-      paymentMode,
-      leadSource,
-      labourCharges,
-      items: verifiedItems,
-      totalAmount: Math.round(totals.totalAmount * 100) / 100,
-      taxableValue: Math.round(totals.taxableValue * 100) / 100,
-      gstAmount: Math.round(totals.gstAmount * 100) / 100
-    };
+    if (editingInvoice) {
+      // Update existing invoice
+      const updatedInvoice: SavedInvoice = {
+        ...editingInvoice,
+        type: activeTab,
+        invoiceNumber,
+        dealerName: dName,
+        contactNo,
+        location,
+        invoiceDate,
+        dueDate,
+        poNumber,
+        sentTo,
+        shipTo,
+        paymentMode,
+        leadSource,
+        labourCharges,
+        items: verifiedItems,
+        totalAmount: Math.round(totals.totalAmount * 100) / 100,
+        taxableValue: Math.round(totals.taxableValue * 100) / 100,
+        gstAmount: Math.round(totals.gstAmount * 100) / 100
+      };
 
-    setSavedInvoices([newInvoice, ...savedInvoices]);
+      setSavedInvoices(savedInvoices.map(inv => inv.id === editingInvoice.id ? updatedInvoice : inv));
+      setEditingInvoice(null);
+      alert('Invoice updated successfully!');
+    } else {
+      // Create new invoice
+      const newInvoice: SavedInvoice = {
+        id: `saved-dlr-inv-${Math.floor(1000 + Math.random() * 9000)}`,
+        type: activeTab,
+        invoiceNumber,
+        dealerName: dName,
+        contactNo,
+        location,
+        invoiceDate,
+        dueDate,
+        poNumber,
+        sentTo,
+        shipTo,
+        paymentMode,
+        leadSource,
+        labourCharges,
+        items: verifiedItems,
+        totalAmount: Math.round(totals.totalAmount * 100) / 100,
+        taxableValue: Math.round(totals.taxableValue * 100) / 100,
+        gstAmount: Math.round(totals.gstAmount * 100) / 100
+      };
+
+      setSavedInvoices([newInvoice, ...savedInvoices]);
+      alert('Invoice saved successfully!');
+    }
 
     // Cleanup form
     setSelectedDealerId('');
@@ -235,11 +289,44 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
     setLabourCharges(0);
     setLeadSource('');
     setLineItems([{ product: '', description: '', unit: 1, amount: 0, gstRate: 18 }]);
-    alert('Invoice saved successfully!');
   };
 
   const handleDeleteInvoice = (id: string) => {
-    setSavedInvoices(savedInvoices.filter(x => x.id !== id));
+    if (confirm('Are you sure you want to delete this invoice?')) {
+      setSavedInvoices(savedInvoices.filter(x => x.id !== id));
+    }
+  };
+
+  const handleEditInvoice = (invoice: SavedInvoice) => {
+    setEditingInvoice(invoice);
+    setActiveTab(invoice.type);
+    setInvoiceNumber(invoice.invoiceNumber);
+    setSelectedDealerId(dealers.find(d => d.name === invoice.dealerName)?.id || '');
+    setContactNo(invoice.contactNo);
+    setLocation(invoice.location);
+    setInvoiceDate(invoice.invoiceDate);
+    setDueDate(invoice.dueDate);
+    setPoNumber(invoice.poNumber);
+    setSentTo(invoice.sentTo);
+    setShipTo(invoice.shipTo);
+    setPaymentMode(invoice.paymentMode);
+    setLeadSource(invoice.leadSource);
+    setLabourCharges(invoice.labourCharges);
+    setLineItems(invoice.items);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingInvoice(null);
+    setSelectedDealerId('');
+    setContactNo('');
+    setLocation('');
+    setPoNumber('');
+    setSentTo('');
+    setShipTo('');
+    setLabourCharges(0);
+    setLeadSource('');
+    setLineItems([{ product: '', description: '', unit: 1, amount: 0, gstRate: 18 }]);
   };
 
   const handlePrintNewTab = (inv: SavedInvoice) => {
@@ -396,9 +483,20 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
 
       {/* Form Section */}
       <form onSubmit={handleCreateInvoiceSubmit} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6">
-        <h2 className="text-sm font-bold text-gray-950 uppercase tracking-wide">
-          {activeTab === 'product' ? 'Create New Invoice' : 'Create New Spares Invoice'}
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-gray-950 uppercase tracking-wide">
+            {editingInvoice ? 'Edit Invoice' : (activeTab === 'product' ? 'Create New Invoice' : 'Create New Spares Invoice')}
+          </h2>
+          {editingInvoice && (
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="text-xs font-bold text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Cancel Edit
+            </button>
+          )}
+        </div>
 
         {/* Master Fields Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
@@ -676,13 +774,22 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
         </div>
 
         {/* Complete Creation Trigger button */}
-        <div className="flex justify-start">
+        <div className="flex justify-start gap-2">
           <button
             type="submit"
             className="bg-emerald-700 hover:bg-emerald-850 text-white font-bold py-2.5 px-8 rounded-lg text-xs tracking-wider transition-all cursor-pointer shadow-sm shadow-emerald-700/10"
           >
-            Create Invoice
+            {editingInvoice ? 'Update Invoice' : 'Create Invoice'}
           </button>
+          {editingInvoice && (
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2.5 px-8 rounded-lg text-xs tracking-wider transition-all cursor-pointer"
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </form>
 
@@ -746,18 +853,23 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
                   <td className="py-3.5 px-4 font-bold text-[10px] text-gray-650 uppercase font-mono">{inv.paymentMode}</td>
                   <td className="py-3.5 px-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      <button 
+                      <button
                         onClick={() => setViewingTaxInvoice(inv)}
                         className="px-2.5 py-1 bg-gray-50 border hover:bg-gray-100 rounded text-[11px] font-bold text-gray-700 cursor-pointer"
                       >
                         Preview
                       </button>
-                      <button className="p-1 px-1.5 text-gray-500 hover:bg-gray-100 rounded">
+                      <button
+                        onClick={() => handleEditInvoice(inv)}
+                        className="p-1 px-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit invoice"
+                      >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteInvoice(inv.id)}
-                        className="p-1 px-1.5 text-rose-600 hover:bg-rose-50 rounded"
+                        className="p-1 px-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                        title="Delete invoice"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

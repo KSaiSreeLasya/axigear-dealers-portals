@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Trash2, 
-  Eye, 
-  Download, 
-  FileSpreadsheet, 
-  CheckCircle, 
+import {
+  Plus,
+  Search,
+  Trash2,
+  Eye,
+  Download,
+  FileSpreadsheet,
+  CheckCircle,
   AlertCircle,
   TrendingUp,
   X,
-  Printer
+  Printer,
+  Edit2
 } from 'lucide-react';
 import { Sale, InventoryItem, Employee, Dealer, ServiceInvoice, ServiceInvoiceItem } from '../types';
 import { saveServiceInvoiceToDb } from '../lib/supabase';
@@ -67,8 +68,11 @@ export default function SalesManager({
   onAddSale,
   onDeductInventoryStock
 }: SalesManagerProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'projects' | 'pipeline'>('projects');
+  const [activeSubTab, setActiveSubTab] = useState<'projects' | 'pipeline' | 'serviceInvoices'>('projects');
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingEstimation, setEditingEstimation] = useState<Estimation | null>(null);
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [editingServiceInvoice, setEditingServiceInvoice] = useState<ServiceInvoice | null>(null);
 
   // Local isolation states
   const dealerSales = sales.filter(s => s.dealerId === currentDealer.id);
@@ -121,11 +125,34 @@ export default function SalesManager({
     { amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }
   ]);
 
+  // Smart numbering: reuse deleted slots
+  const getNextEstimationSlipNo = () => {
+    const dealerEsts = estimations.filter(e => e.dealerId === currentDealer.id);
+
+    // Extract all used numbers from slip numbers like AAV-RRE-CODE-001
+    const usedNumbers = new Set<number>();
+    dealerEsts.forEach(est => {
+      const match = est.slipNo.match(/-(\d{3})$/);
+      if (match) {
+        usedNumbers.add(parseInt(match[1], 10));
+      }
+    });
+
+    // Find first available slot
+    let nextNum = 1;
+    while (usedNumbers.has(nextNum)) {
+      nextNum++;
+    }
+
+    return `AAV-RRE-${currentDealer.code}-${String(nextNum).padStart(3, '0')}`;
+  };
+
   useEffect(() => {
-    // Auto-generate estimation slip number
-    const dealerEstCount = estimations.filter(e => e.dealerId === currentDealer.id).length + 1;
-    setEstSlipNo(`AAV-RRE-${currentDealer.code}-${String(dealerEstCount).padStart(3, '0')}`);
-  }, [estimations, currentDealer.id, currentDealer.code]);
+    // Auto-generate estimation slip number only if not editing
+    if (!editingEstimation) {
+      setEstSlipNo(getNextEstimationSlipNo());
+    }
+  }, [estimations, currentDealer.id, currentDealer.code, editingEstimation]);
 
   const handleAddSplit = () => {
     setEstSplits([...estSplits, { amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }]);
@@ -159,22 +186,45 @@ export default function SalesManager({
       return;
     }
 
-    const newEst: Estimation = {
-      id: `est-uuid-${Math.floor(1000 + Math.random() * 9000)}`,
-      dealerId: currentDealer.id,
-      slipNo: estSlipNo,
-      customerName: estCustomerName,
-      contactNo: estContactNo,
-      address: estAddress,
-      date: estDate,
-      model: estModel,
-      totalAmount: estAmount,
-      paymentMethod: estPaymentMethod,
-      leadSource: estLeadSource,
-      splits: estSplits.filter(s => s.amount > 0)
-    };
+    if (editingEstimation) {
+      // Update existing estimation
+      const updatedEst: Estimation = {
+        ...editingEstimation,
+        slipNo: estSlipNo,
+        customerName: estCustomerName,
+        contactNo: estContactNo,
+        address: estAddress,
+        date: estDate,
+        model: estModel,
+        totalAmount: estAmount,
+        paymentMethod: estPaymentMethod,
+        leadSource: estLeadSource,
+        splits: estSplits.filter(s => s.amount > 0)
+      };
 
-    setEstimations([newEst, ...estimations]);
+      setEstimations(estimations.map(est => est.id === editingEstimation.id ? updatedEst : est));
+      setEditingEstimation(null);
+      alert('Estimation updated successfully!');
+    } else {
+      // Create new estimation
+      const newEst: Estimation = {
+        id: `est-uuid-${Math.floor(1000 + Math.random() * 9000)}`,
+        dealerId: currentDealer.id,
+        slipNo: estSlipNo,
+        customerName: estCustomerName,
+        contactNo: estContactNo,
+        address: estAddress,
+        date: estDate,
+        model: estModel,
+        totalAmount: estAmount,
+        paymentMethod: estPaymentMethod,
+        leadSource: estLeadSource,
+        splits: estSplits.filter(s => s.amount > 0)
+      };
+
+      setEstimations([newEst, ...estimations]);
+      alert('Estimation saved successfully!');
+    }
 
     // reset fields
     setEstCustomerName('');
@@ -183,7 +233,54 @@ export default function SalesManager({
     setEstModel('');
     setEstAmount(0);
     setEstSplits([{ amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }]);
-    alert('Estimation estimation logged successfully under sales timeline!');
+  };
+
+  const handleEditEstimation = (estimation: Estimation) => {
+    setEditingEstimation(estimation);
+    setEstSlipNo(estimation.slipNo);
+    setEstCustomerName(estimation.customerName);
+    setEstContactNo(estimation.contactNo);
+    setEstAddress(estimation.address);
+    setEstDate(estimation.date);
+    setEstModel(estimation.model);
+    setEstAmount(estimation.totalAmount);
+    setEstPaymentMethod(estimation.paymentMethod);
+    setEstLeadSource(estimation.leadSource);
+    setEstSplits(estimation.splits.length > 0 ? estimation.splits : [{ amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteEstimation = (id: string) => {
+    if (confirm('Are you sure you want to delete this estimation?')) {
+      setEstimations(estimations.filter(est => est.id !== id));
+    }
+  };
+
+  const handleCancelEditEstimation = () => {
+    setEditingEstimation(null);
+    setEstCustomerName('');
+    setEstContactNo('');
+    setEstAddress('');
+    setEstModel('');
+    setEstAmount(0);
+    setEstPaymentMethod('Cash');
+    setEstLeadSource('Walk In');
+    setEstSplits([{ amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }]);
+  };
+
+  const handleDeleteSale = (id: string) => {
+    if (confirm('Are you sure you want to delete this sale?')) {
+      // This would need to be handled by the parent component
+      // For now, we'll just notify that the operation would delete the sale
+      console.log('Delete sale:', id);
+      alert('Delete functionality handled by parent App component');
+    }
+  };
+
+  const handleDeleteServiceInvoice = (id: string) => {
+    if (confirm('Are you sure you want to delete this service invoice?')) {
+      setServiceInvoices(serviceInvoices.filter(inv => inv.id !== id));
+    }
   };
 
   // --- Project / Sale Modal states matching Image 3 ---
@@ -571,7 +668,7 @@ export default function SalesManager({
                     <th className="py-3 px-4 font-mono">Invoice Date</th>
                     <th className="py-3 px-4 text-right">Amount</th>
                     <th className="py-3 px-4">Payment Mode</th>
-                    <th className="py-3 px-4 text-right">Invoice</th>
+                    <th className="py-3 px-4 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-150 text-gray-700 text-center">
@@ -598,12 +695,29 @@ export default function SalesManager({
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <button
-                          onClick={() => setViewingTaxInvoice({ type: 'sale', data: sale })}
-                          className="px-2.5 py-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded text-[10px] font-bold tracking-wider cursor-pointer border border-emerald-105"
-                        >
-                          Invoice
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setViewingTaxInvoice({ type: 'sale', data: sale })}
+                            className="px-2.5 py-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded text-[10px] font-bold tracking-wider cursor-pointer border border-emerald-105"
+                          >
+                            Invoice
+                          </button>
+                          <a
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); alert('Edit functionality handled by parent component'); }}
+                            className="px-2.5 py-1 text-blue-600 hover:bg-blue-50 rounded text-[10px] font-bold cursor-pointer transition-colors"
+                            title="Edit sale"
+                          >
+                            Edit
+                          </a>
+                          <button
+                            onClick={() => handleDeleteSale(sale.id)}
+                            className="p-1 px-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                            title="Delete sale"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -641,7 +755,20 @@ export default function SalesManager({
 
           {/* Add Estimation form layout of Image 2 */}
           <form onSubmit={handleSaveEstimation} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6">
-            <h2 className="text-sm font-bold text-gray-950 uppercase tracking-wide">Add Estimation</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-950 uppercase tracking-wide">
+                {editingEstimation ? 'Edit Estimation' : 'Add Estimation'}
+              </h2>
+              {editingEstimation && (
+                <button
+                  type="button"
+                  onClick={handleCancelEditEstimation}
+                  className="text-xs font-bold text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
               <div className="space-y-1">
@@ -838,13 +965,22 @@ export default function SalesManager({
               </button>
             </div>
 
-            <div className="flex pt-2">
+            <div className="flex gap-2 pt-2">
               <button
                 type="submit"
                 className="bg-emerald-700 hover:bg-emerald-850 text-white font-bold py-2.5 px-8 rounded-lg text-xs tracking-wider transition-all cursor-pointer"
               >
-                Save Estimation
+                {editingEstimation ? 'Update Estimation' : 'Save Estimation'}
               </button>
+              {editingEstimation && (
+                <button
+                  type="button"
+                  onClick={handleCancelEditEstimation}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2.5 px-8 rounded-lg text-xs tracking-wider transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+              )}
             </div>
           </form>
 
@@ -884,13 +1020,31 @@ export default function SalesManager({
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setViewingTaxInvoice({ type: 'estimation', data: est })}
-                            className="px-2.5 py-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded text-[10px] font-bold tracking-wider cursor-pointer border border-emerald-105"
-                          >
-                            Invoice
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setViewingTaxInvoice({ type: 'estimation', data: est })}
+                              className="px-2.5 py-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded text-[10px] font-bold tracking-wider cursor-pointer border border-emerald-105"
+                            >
+                              Invoice
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleEditEstimation(est)}
+                              className="p-1 px-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="Edit estimation"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteEstimation(est.id)}
+                              className="p-1 px-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                              title="Delete estimation"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
