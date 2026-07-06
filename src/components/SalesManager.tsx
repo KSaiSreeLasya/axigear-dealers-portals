@@ -518,7 +518,7 @@ export default function SalesManager({
       return;
     }
 
-    onAddSale({
+    const saleData = {
       customerName: saleCustomerName,
       customerPhone: saleContactNo,
       items: [
@@ -533,7 +533,6 @@ export default function SalesManager({
       paymentMethod: salePaymentMode,
       salespersonId: activeEmployees[0]?.id || 'staff-1',
       salespersonName: activeEmployees[0]?.name || 'Branch Office Head',
-      // our extra attributes
       modelNo: saleModelNo,
       location: saleLocation,
       productDesc: saleProductDesc,
@@ -549,9 +548,23 @@ export default function SalesManager({
       splits: saleSplits.filter(s => s.amount > 0),
       displaySplitsInInvoice: saleDisplaySplits,
       date: saleInvoiceDate
-    });
+    };
+
+    if (editingSale) {
+      const updatedSale: Sale = {
+        ...editingSale,
+        ...saleData,
+        items: saleData.items
+      };
+      if (onEditSale) {
+        onEditSale(updatedSale);
+      }
+    } else {
+      onAddSale(saleData);
+    }
 
     setIsAddSaleOpen(false);
+    setEditingSale(null);
 
     // reset fields
     setSaleModelNo('');
@@ -712,11 +725,27 @@ export default function SalesManager({
                             href="#"
                             onClick={(e) => {
                               e.preventDefault();
-                              if (onEditSale) {
-                                onEditSale(sale);
-                              } else {
-                                alert('Edit functionality handled by parent component');
-                              }
+                              setEditingSale(sale);
+                              setSaleModelNo(sale.modelNo || '');
+                              setSaleCustomerName(sale.customerName);
+                              setSaleContactNo(sale.customerPhone || '');
+                              setSaleLocation(sale.location || '');
+                              setSaleProductDesc(sale.productDesc || '');
+                              setSaleHsnNo(sale.hsnNo || '871160');
+                              setSaleChassisNo(sale.chassisNo || '');
+                              setSaleMotorNo(sale.motorNo || '');
+                              setSaleBatteryNo(sale.batteryNo || '');
+                              setSaleBatteryWarranty(sale.batteryWarranty || '36months or 30,000kms');
+                              setSaleBatteryCapacity(sale.batteryCapacity || '45V-30AH');
+                              setSaleVehicleWarranty(sale.vehicleWarranty || '12 months');
+                              setSaleInvoiceDate(sale.date);
+                              setSaleAmount(sale.totalAmount);
+                              setSalePaymentMode(sale.paymentMethod as any);
+                              setSaleLeadSource(sale.leadSource || '');
+                              setSaleGstNo(sale.gstNo || '');
+                              setSaleDisplaySplits(sale.displaySplitsInInvoice !== false);
+                              setSaleSplits(sale.splits || [{ amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }]);
+                              setIsAddSaleOpen(true);
                             }}
                             className="px-2.5 py-1 text-blue-600 hover:bg-blue-50 rounded text-[10px] font-bold cursor-pointer transition-colors"
                             title="Edit sale"
@@ -1506,11 +1535,18 @@ export default function SalesManager({
           <div className="bg-white rounded-2xl max-w-4xl w-full border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col text-gray-800 font-sans">
             <div className="bg-gray-50 border-b p-5 flex items-center justify-between shrink-0">
               <div>
-                <h3 className="font-bold text-base text-gray-950 uppercase tracking-wide">New sales entry</h3>
-                <p className="text-gray-450 text-[10px] mt-0.5">Register direct retail motorcycle sale transactions</p>
+                <h3 className="font-bold text-base text-gray-950 uppercase tracking-wide">
+                  {editingSale ? 'Edit sales entry' : 'New sales entry'}
+                </h3>
+                <p className="text-gray-450 text-[10px] mt-0.5">
+                  {editingSale ? 'Update motorcycle sale transaction' : 'Register direct retail motorcycle sale transactions'}
+                </p>
               </div>
-              <button 
-                onClick={() => setIsAddSaleOpen(false)}
+              <button
+                onClick={() => {
+                  setIsAddSaleOpen(false);
+                  setEditingSale(null);
+                }}
                 className="p-1 px-1.5 hover:bg-gray-100 rounded text-gray-550"
               >
                 <X className="w-5 h-5" />
