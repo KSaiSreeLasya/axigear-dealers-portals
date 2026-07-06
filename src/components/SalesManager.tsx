@@ -289,6 +289,36 @@ export default function SalesManager({
     }
   };
 
+  const handleEditServiceInvoice = (invoice: ServiceInvoice) => {
+    setEditingServiceInvoice(invoice);
+    setSrvInvoiceNo(invoice.invoiceNo);
+    setSrvCustomerName(invoice.customerName);
+    setSrvContactNo(invoice.customerPhone);
+    setSrvLocation(invoice.location);
+    setSrvInvoiceDate(invoice.date);
+    setSrvLabourCharges(invoice.labourCharges);
+    setSrvPaymentMethod(invoice.paymentMethod);
+    setSrvLeadSource(invoice.leadSource);
+    setSrvEnableGst(invoice.enableGst);
+    setSrvProducts(invoice.products.length > 0 ? invoice.products : [{ id: 'srv-p-1', name: '', price: 0, quantity: 1 }]);
+    setSrvProductDescription(invoice.productDescription);
+    setSrvSplits(invoice.splits.length > 0 ? invoice.splits : [{ amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }]);
+    setSrvDisplaySplits(invoice.displaySplitsInInvoice);
+  };
+
+  const handleCancelEditServiceInvoice = () => {
+    setEditingServiceInvoice(null);
+    setSrvCustomerName('');
+    setSrvContactNo('');
+    setSrvLocation('');
+    setSrvLabourCharges(0);
+    setSrvLeadSource('');
+    setSrvProductDescription('');
+    setSrvProducts([{ id: 'srv-p-1', name: '', price: 0, quantity: 1 }]);
+    setSrvSplits([{ amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }]);
+    setSrvDisplaySplits(false);
+  };
+
   // --- Project / Sale Modal states matching Image 3 ---
   const [isAddSaleOpen, setIsAddSaleOpen] = useState(false);
   const [viewingTaxInvoice, setViewingTaxInvoice] = useState<{
@@ -475,27 +505,54 @@ export default function SalesManager({
       return;
     }
 
-    const newSrvInvoice: ServiceInvoice = {
-      id: `srv-uuid-${Math.floor(1000 + Math.random() * 9000)}`,
-      dealerId: currentDealer.id,
-      invoiceNo: srvInvoiceNo,
-      customerName: srvCustomerName,
-      customerPhone: srvContactNo,
-      location: srvLocation,
-      date: srvInvoiceDate,
-      labourCharges: srvLabourCharges,
-      paymentMethod: srvPaymentMethod,
-      leadSource: srvLeadSource,
-      enableGst: srvEnableGst,
-      products: srvProducts.filter(p => p.name !== ''),
-      productDescription: srvProductDescription,
-      totalAmount: srvInvoiceTotal,
-      splits: srvSplits.filter(s => s.amount > 0),
-      displaySplitsInInvoice: srvDisplaySplits
-    };
+    if (editingServiceInvoice) {
+      // Update existing invoice
+      const updatedSrvInvoice: ServiceInvoice = {
+        ...editingServiceInvoice,
+        invoiceNo: srvInvoiceNo,
+        customerName: srvCustomerName,
+        customerPhone: srvContactNo,
+        location: srvLocation,
+        date: srvInvoiceDate,
+        labourCharges: srvLabourCharges,
+        paymentMethod: srvPaymentMethod,
+        leadSource: srvLeadSource,
+        enableGst: srvEnableGst,
+        products: srvProducts.filter(p => p.name !== ''),
+        productDescription: srvProductDescription,
+        totalAmount: srvInvoiceTotal,
+        splits: srvSplits.filter(s => s.amount > 0),
+        displaySplitsInInvoice: srvDisplaySplits
+      };
 
-    setServiceInvoices([newSrvInvoice, ...serviceInvoices]);
-    saveServiceInvoiceToDb(newSrvInvoice).catch(console.error);
+      setServiceInvoices(serviceInvoices.map(inv => inv.id === editingServiceInvoice.id ? updatedSrvInvoice : inv));
+      saveServiceInvoiceToDb(updatedSrvInvoice).catch(console.error);
+      alert('Service invoice updated successfully!');
+    } else {
+      // Create new invoice
+      const newSrvInvoice: ServiceInvoice = {
+        id: `srv-uuid-${Math.floor(1000 + Math.random() * 9000)}`,
+        dealerId: currentDealer.id,
+        invoiceNo: srvInvoiceNo,
+        customerName: srvCustomerName,
+        customerPhone: srvContactNo,
+        location: srvLocation,
+        date: srvInvoiceDate,
+        labourCharges: srvLabourCharges,
+        paymentMethod: srvPaymentMethod,
+        leadSource: srvLeadSource,
+        enableGst: srvEnableGst,
+        products: srvProducts.filter(p => p.name !== ''),
+        productDescription: srvProductDescription,
+        totalAmount: srvInvoiceTotal,
+        splits: srvSplits.filter(s => s.amount > 0),
+        displaySplitsInInvoice: srvDisplaySplits
+      };
+
+      setServiceInvoices([newSrvInvoice, ...serviceInvoices]);
+      saveServiceInvoiceToDb(newSrvInvoice).catch(console.error);
+      alert('Service invoice created successfully!');
+    }
 
     // reset fields
     setSrvCustomerName('');
@@ -507,8 +564,7 @@ export default function SalesManager({
     setSrvProducts([{ id: 'srv-p-1', name: '', price: 0, quantity: 1 }]);
     setSrvSplits([{ amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }]);
     setSrvDisplaySplits(false);
-    
-    alert('Service invoice created successfully!');
+    setEditingServiceInvoice(null);
   };
 
   const handleCreateSaleSubmit = (e: React.FormEvent) => {
@@ -1136,7 +1192,20 @@ export default function SalesManager({
 
           {/* Form Block: Create New Service Invoice */}
           <form onSubmit={handleCreateServiceInvoiceSubmit} className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-6 text-gray-800">
-            <h2 className="text-sm font-bold text-gray-950 uppercase tracking-wide">Create New Service Invoice</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-950 uppercase tracking-wide">
+                {editingServiceInvoice ? 'Edit Service Invoice' : 'Create New Service Invoice'}
+              </h2>
+              {editingServiceInvoice && (
+                <button
+                  type="button"
+                  onClick={handleCancelEditServiceInvoice}
+                  className="text-xs font-bold text-gray-500 hover:text-gray-700 px-3 py-1 border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div className="space-y-1">
@@ -1519,7 +1588,7 @@ export default function SalesManager({
                             href="#"
                             onClick={(e) => {
                               e.preventDefault();
-                              setEditingServiceInvoice(srv);
+                              handleEditServiceInvoice(srv);
                             }}
                             className="px-2.5 py-1 text-blue-600 hover:bg-blue-50 rounded text-[10px] font-bold cursor-pointer transition-colors"
                             title="Edit service invoice"
