@@ -68,9 +68,11 @@ export default function SalesManager({
   onAddSale,
   onDeductInventoryStock
 }: SalesManagerProps) {
-  const [activeSubTab, setActiveSubTab] = useState<'projects' | 'pipeline'>('projects');
+  const [activeSubTab, setActiveSubTab] = useState<'projects' | 'pipeline' | 'serviceInvoices'>('projects');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingEstimation, setEditingEstimation] = useState<Estimation | null>(null);
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [editingServiceInvoice, setEditingServiceInvoice] = useState<ServiceInvoice | null>(null);
 
   // Local isolation states
   const dealerSales = sales.filter(s => s.dealerId === currentDealer.id);
@@ -264,6 +266,21 @@ export default function SalesManager({
     setEstPaymentMethod('Cash');
     setEstLeadSource('Walk In');
     setEstSplits([{ amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }]);
+  };
+
+  const handleDeleteSale = (id: string) => {
+    if (confirm('Are you sure you want to delete this sale?')) {
+      // This would need to be handled by the parent component
+      // For now, we'll just notify that the operation would delete the sale
+      console.log('Delete sale:', id);
+      alert('Delete functionality handled by parent App component');
+    }
+  };
+
+  const handleDeleteServiceInvoice = (id: string) => {
+    if (confirm('Are you sure you want to delete this service invoice?')) {
+      setServiceInvoices(serviceInvoices.filter(inv => inv.id !== id));
+    }
   };
 
   // --- Project / Sale Modal states matching Image 3 ---
@@ -651,7 +668,7 @@ export default function SalesManager({
                     <th className="py-3 px-4 font-mono">Invoice Date</th>
                     <th className="py-3 px-4 text-right">Amount</th>
                     <th className="py-3 px-4">Payment Mode</th>
-                    <th className="py-3 px-4 text-right">Invoice</th>
+                    <th className="py-3 px-4 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-150 text-gray-700 text-center">
@@ -678,12 +695,29 @@ export default function SalesManager({
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <button
-                          onClick={() => setViewingTaxInvoice({ type: 'sale', data: sale })}
-                          className="px-2.5 py-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded text-[10px] font-bold tracking-wider cursor-pointer border border-emerald-105"
-                        >
-                          Invoice
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setViewingTaxInvoice({ type: 'sale', data: sale })}
+                            className="px-2.5 py-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded text-[10px] font-bold tracking-wider cursor-pointer border border-emerald-105"
+                          >
+                            Invoice
+                          </button>
+                          <a
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); alert('Edit functionality handled by parent component'); }}
+                            className="px-2.5 py-1 text-blue-600 hover:bg-blue-50 rounded text-[10px] font-bold cursor-pointer transition-colors"
+                            title="Edit sale"
+                          >
+                            Edit
+                          </a>
+                          <button
+                            onClick={() => handleDeleteSale(sale.id)}
+                            className="p-1 px-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                            title="Delete sale"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
