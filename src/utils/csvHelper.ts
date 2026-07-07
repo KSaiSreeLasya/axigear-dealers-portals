@@ -129,8 +129,8 @@ export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 
     (invoice.items || []).forEach((it: any, i: number) => {
       const qty = it.quantity || 1;
       const itemPrice = it.pricePerUnit || 0;
-      const gstRate = 18;
-      const itemTaxable = Math.round((itemPrice / 1.18) * 100) / 100;
+      const gstRate = 5;
+      const itemTaxable = Math.round((itemPrice / 1.05) * 100) / 100;
       const itemGst = itemPrice - itemTaxable;
 
       itemsHtml += `
@@ -170,9 +170,9 @@ export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 
         <td style="text-align: center;">9987</td>
         <td style="text-align: center;">1</td>
         <td style="text-align: right;">${formatCurrency(invoice.labourCharges || 0)}</td>
-        <td style="text-align: center;">5%</td>
-        <td style="text-align: right;">${formatCurrency((invoice.labourCharges || 0) * 0.05)}</td>
-        <td style="text-align: right;">${formatCurrency((invoice.labourCharges || 0) * 1.05)}</td>
+        <td style="text-align: center;">18%</td>
+        <td style="text-align: right;">${formatCurrency((invoice.labourCharges || 0) * 0.18)}</td>
+        <td style="text-align: right;">${formatCurrency((invoice.labourCharges || 0) * 1.18)}</td>
       </tr>
     `;
 
@@ -180,7 +180,7 @@ export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 
       const price = it.price || 0;
       const qty = it.quantity || 1;
       const total = price * qty;
-      const gstAmt = invoice.enableGst ? Math.round(total * 0.05 * 100) / 100 : 0;
+      const gstAmt = invoice.enableGst ? Math.round(total * 0.18 * 100) / 100 : 0;
       itemsHtml += `
         <tr>
           <td style="text-align: center;">${i + 2}</td>
@@ -188,7 +188,7 @@ export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 
           <td style="text-align: center;">8714</td>
           <td style="text-align: center;">${qty}</td>
           <td style="text-align: right;">${formatCurrency(price)}</td>
-          <td style="text-align: center;">${invoice.enableGst ? '5%' : '0%'}</td>
+          <td style="text-align: center;">${invoice.enableGst ? '18%' : '0%'}</td>
           <td style="text-align: right;">${formatCurrency(gstAmt)}</td>
           <td style="text-align: right;">${formatCurrency(total + gstAmt)}</td>
         </tr>

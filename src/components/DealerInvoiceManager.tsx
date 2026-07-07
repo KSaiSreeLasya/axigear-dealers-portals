@@ -65,11 +65,11 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
         leadSource: 'Corporate Referral',
         labourCharges: 0,
         items: [
-          { product: 'Axigear Electric Bike', description: 'Dual Battery Pro', unit: 1, amount: 730462.71, gstRate: 18 }
+          { product: 'Axigear Electric Bike', description: 'Dual Battery Pro', unit: 1, amount: 730462.71, gstRate: 5 }
         ],
-        totalAmount: 861946.00,
+        totalAmount: 767235.64,
         taxableValue: 730462.71,
-        gstAmount: 131483.29
+        gstAmount: 36523.14
       },
       {
         id: 'inv-seed-2',
@@ -87,11 +87,11 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
         leadSource: 'Walk In',
         labourCharges: 0,
         items: [
-          { product: 'Brake Shoe Spark', description: 'Heavy duty spares', unit: 1, amount: 12118.64, gstRate: 18 }
+          { product: 'Brake Shoe Spark', description: 'Heavy duty spares', unit: 1, amount: 12118.64, gstRate: 5 }
         ],
-        totalAmount: 14300.00,
+        totalAmount: 12724.57,
         taxableValue: 12118.64,
-        gstAmount: 2181.36
+        gstAmount: 605.93
       }
     ];
   });
@@ -116,7 +116,7 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
 
   // Dynamic Line items list
   const [lineItems, setLineItems] = useState<InvoiceProductRow[]>([
-    { product: '', description: '', unit: 1, amount: 0, gstRate: 18 }
+    { product: '', description: '', unit: 1, amount: 0, gstRate: 5 }
   ]);
 
   // Smart numbering: reuse deleted slots or assign next number
@@ -165,12 +165,12 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
 
   // Line item modifiers
   const handleAddLineRow = () => {
-    setLineItems([...lineItems, { product: '', description: '', unit: 1, amount: 0, gstRate: 18 }]);
+    setLineItems([...lineItems, { product: '', description: '', unit: 1, amount: 0, gstRate: 5 }]);
   };
 
   const handleRemoveLineRow = (idx: number) => {
     if (lineItems.length === 1) {
-      setLineItems([{ product: '', description: '', unit: 1, amount: 0, gstRate: 18 }]);
+      setLineItems([{ product: '', description: '', unit: 1, amount: 0, gstRate: 5 }]);
     } else {
       setLineItems(lineItems.filter((_, i) => i !== idx));
     }
@@ -288,7 +288,7 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
     setShipTo('');
     setLabourCharges(0);
     setLeadSource('');
-    setLineItems([{ product: '', description: '', unit: 1, amount: 0, gstRate: 18 }]);
+    setLineItems([{ product: '', description: '', unit: 1, amount: 0, gstRate: 5 }]);
   };
 
   const handleDeleteInvoice = (id: string) => {
@@ -326,7 +326,7 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
     setShipTo('');
     setLabourCharges(0);
     setLeadSource('');
-    setLineItems([{ product: '', description: '', unit: 1, amount: 0, gstRate: 18 }]);
+    setLineItems([{ product: '', description: '', unit: 1, amount: 0, gstRate: 5 }]);
   };
 
   const handlePrintNewTab = (inv: SavedInvoice) => {
@@ -334,7 +334,7 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
     if (printWindow) {
       const itemsHtml = inv.items.map((it, i) => {
         const taxable = it.amount || 0;
-        const gst = it.gstRate || 18;
+        const gst = it.gstRate || 5;
         const gstAmt = Math.round(taxable * (gst / 100) * 100) / 100;
         const total = taxable + gstAmt;
         return `
@@ -425,7 +425,7 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
                 <span>₹${inv.taxableValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div class="summary-row">
-                <span>GST Amount (18%):</span>
+                <span>GST Amount (5%):</span>
                 <span>₹${inv.gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div class="summary-row grand-total">
@@ -710,9 +710,9 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
                           onChange={(e) => handleLineChange(idx, 'gstRate', e.target.value)}
                           className="w-full bg-white text-xs border border-gray-200 rounded py-1 px-1 focus:outline-none font-mono"
                         >
+                          <option value="5">GST 5%</option>
                           <option value="18">GST 18%</option>
                           <option value="12">GST 12%</option>
-                          <option value="5">GST 5%</option>
                           <option value="0">GST 0%</option>
                         </select>
                       </td>
@@ -763,7 +763,7 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
               <span>₹{totals.taxableValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between text-gray-505 pb-2 border-b">
-              <span>GST (18% Avg):</span>
+              <span>GST (5% Avg):</span>
               <span>₹{totals.gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </div>
             <div className="flex justify-between text-gray-950 font-black text-sm pt-1">
@@ -1030,7 +1030,7 @@ export default function DealerInvoiceManager({ dealers, currentDealer }: DealerI
                       <span>₹{viewingTaxInvoice.taxableValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between text-gray-550 pb-2 border-b">
-                      <span>Consolidated GST (18%):</span>
+                      <span>Consolidated GST (5%):</span>
                       <span>₹{viewingTaxInvoice.gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                     </div>
                     <div className="flex justify-between text-sm font-black text-gray-950 pt-1">
