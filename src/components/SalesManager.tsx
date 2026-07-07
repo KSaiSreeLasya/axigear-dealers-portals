@@ -206,7 +206,9 @@ export default function SalesManager({
         splits: estSplits.filter(s => s.amount > 0)
       };
 
-      setEstimations(estimations.map(est => est.id === editingEstimation.id ? updatedEst : est));
+      const updatedList = estimations.map(est => est.id === editingEstimation.id ? updatedEst : est);
+      setEstimations(updatedList);
+      localStorage.setItem('axigear_estimations', JSON.stringify(updatedList));
       saveEstimationToDb(updatedEst).catch(console.error);
       setEditingEstimation(null);
       alert('Estimation updated successfully!');
@@ -227,7 +229,9 @@ export default function SalesManager({
         splits: estSplits.filter(s => s.amount > 0)
       };
 
-      setEstimations([newEst, ...estimations]);
+      const newList = [newEst, ...estimations];
+      setEstimations(newList);
+      localStorage.setItem('axigear_estimations', JSON.stringify(newList));
       saveEstimationToDb(newEst).catch(console.error);
       alert('Estimation saved successfully!');
     }
@@ -258,7 +262,9 @@ export default function SalesManager({
 
   const handleDeleteEstimation = (id: string) => {
     if (confirm('Are you sure you want to delete this estimation?')) {
-      setEstimations(estimations.filter(est => est.id !== id));
+      const updatedList = estimations.filter(est => est.id !== id);
+      setEstimations(updatedList);
+      localStorage.setItem('axigear_estimations', JSON.stringify(updatedList));
       deleteEstimationFromDb(id).catch(console.error);
     }
   };
