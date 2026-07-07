@@ -502,7 +502,7 @@ export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 
         <td class="billing-col">
           <div class="billing-title">Consignor (Issuer)</div>
           <div class="address-box">
-            <strong>AXIGEAR ELECTRIC LOUNGE LLP</strong><br>
+            <strong>AXIGEAR ELECTRIC LOUNGE </strong><br>
             Registered Office: SY 02, PLOT NO.148, MYTHRI NAGAR, MADINAGUDA<br>
             HYDERABAD, TELANGANA, INDIA 500049<br>
             GSTIN: 36ACJFA4386L1ZW<br>
