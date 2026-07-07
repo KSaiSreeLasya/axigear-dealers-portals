@@ -516,7 +516,7 @@ export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 
             Store Address: ${dealer?.name === 'ZEN -Z ENERGY' ? 'KRISHNAREDDYPET, BEERAMGUDA' : dealer?.location || address}<br>
             Dealer License Ref No: ${dealer?.code || 'N/A'}<br>
             FRANCHISE REGISTERED GSTIN: ${invoice.gstNo || (dealer?.name?.toLowerCase().includes('zen') ? '36ABLFR7464F1ZR' : '29AXGPI8174C3ZD')}<br>
-            Contact: ${dealer?.name === 'ZEN -Z ENERGY' ? '7989161749' : customerPhone || 'N/A'}
+            Contact: ${dealer?.name === 'ZEN -Z ENERGY' ? '7989161749' :  'N/A'}
           </div>
         </td>
       </tr>
