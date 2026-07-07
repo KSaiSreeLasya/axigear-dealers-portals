@@ -1,6 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 import { Dealer, InventoryItem, Employee, AttendanceRecord, Sale, ServiceTicket, ServiceMessage, ServiceInvoice } from '../types';
 
+export interface Estimation {
+  id: string;
+  dealerId: string;
+  slipNo: string;
+  customerName: string;
+  contactNo: string;
+  address: string;
+  date: string;
+  model: string;
+  totalAmount: number;
+  paymentMethod: string;
+  leadSource: string;
+  splits: Array<{ amount: number; paymentMethod: string; date: string }>;
+}
+
 const SUPABASE_URL = 'https://pevjxmhzulmmdidvlbsu.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBldmp4bWh6dWxtbWRpZHZsYnN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgxNDE4MDEsImV4cCI6MjA5MzcxNzgwMX0.fpE9TEkC6XQgGpr-bJgnEhrQB0CwNoiQ4yfs79zPSPA';
 
@@ -134,7 +149,8 @@ export async function pullDatabase() {
     sales: [] as Sale[],
     tickets: [] as ServiceTicket[],
     messages: [] as ServiceMessage[],
-    serviceInvoices: [] as ServiceInvoice[]
+    serviceInvoices: [] as ServiceInvoice[],
+    estimations: [] as Estimation[]
   };
 
   try {
@@ -224,12 +240,12 @@ export async function pullDatabase() {
 
     // 5. Sales & Sale line items
     if (await safeGetTable('dms_sales') && await safeGetTable('dms_sale_items')) {
-      const { data: salesData } = await supabase.from('dms_sales').select('*');
+      const { data: salesData } = await supabase.from('dms_sales').select('*').order('date', { ascending: false });
       const { data: itemsData } = await supabase.from('dms_sale_items').select('*');
 
       if (salesData) {
         result.sales = salesData.map(s => {
-          const matchingItems = itemsData 
+          const matchingItems = itemsData
             ? itemsData.filter(i => i.sale_id === s.id).map(mi => ({
                 itemId: mi.item_id,
                 name: mi.name,
@@ -303,9 +319,9 @@ export async function pullDatabase() {
 
     // 8. Service Invoices
     if (await safeGetTable('dms_service_invoices') && await safeGetTable('dms_service_invoice_items')) {
-      const { data: srvInvoicesData } = await supabase.from('dms_service_invoices').select('*');
+      const { data: srvInvoicesData } = await supabase.from('dms_service_invoices').select('*').order('date', { ascending: false });
       const { data: srvItemsData } = await supabase.from('dms_service_invoice_items').select('*');
-      const { data: srvSplitsData } = await safeGetTable('dms_service_invoice_splits') 
+      const { data: srvSplitsData } = await safeGetTable('dms_service_invoice_splits')
         ? await supabase.from('dms_service_invoice_splits').select('*')
         : { data: null };
 
@@ -319,7 +335,7 @@ export async function pullDatabase() {
                 quantity: Number(mi.quantity)
               }))
             : [];
-          
+
           const matchingSplits = srvSplitsData
             ? srvSplitsData.filter(sp => sp.service_invoice_id === sv.id).map(msp => ({
                 amount: Number(msp.amount),
@@ -349,6 +365,30 @@ export async function pullDatabase() {
         });
       }
     }
+
+    // 9. Estimations/Sales Pipeline
+    if (await safeGetTable('dms_estimations')) {
+      const { data: estData } = await supabase.from('dms_estimations').select('*').order('date', { ascending: false });
+      if (estData) {
+        result.estimations = estData.map(e => {
+          const splits = e.splits && Array.isArray(e.splits) ? e.splits : [];
+          return {
+            id: e.id,
+            dealerId: e.dealer_id,
+            slipNo: e.slip_no,
+            customerName: e.customer_name,
+            contactNo: e.contact_no,
+            address: e.address,
+            date: e.date,
+            model: e.model,
+            totalAmount: Number(e.total_amount),
+            paymentMethod: e.payment_method,
+            leadSource: e.lead_source,
+            splits
+          };
+        });
+      }
+    }
   } catch (error) {
     console.error('Error executing pull database query operations:', error);
   }
@@ -365,7 +405,8 @@ export async function pushDatabaseBulk(
   sales: Sale[],
   tickets: ServiceTicket[],
   messages: ServiceMessage[],
-  serviceInvoices?: ServiceInvoice[]
+  serviceInvoices?: ServiceInvoice[],
+  estimations?: Estimation[]
 ) {
   const reports: string[] = [];
 
@@ -709,6 +750,39 @@ export async function pushDatabaseBulk(
     reports.push(`Synced ${currentServiceInvoices.length} service invoices with ${srvLineItems.length} spare parts lists successfully`);
   }
 
+  // 9. Reset & Upsert Estimations/Sales Pipeline
+  const currentEstimations = estimations || (() => {
+    try {
+      const disk = localStorage.getItem('axigear_estimations');
+      return disk ? JSON.parse(disk) as Estimation[] : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  if (currentEstimations.length > 0) {
+    const dbEstimations = currentEstimations.map(e => ({
+      id: e.id,
+      dealer_id: e.dealerId,
+      slip_no: e.slipNo,
+      customer_name: e.customerName,
+      contact_no: e.contactNo,
+      address: e.address,
+      date: e.date,
+      model: e.model,
+      total_amount: e.totalAmount,
+      payment_method: e.paymentMethod,
+      lead_source: e.leadSource,
+      splits: e.splits || []
+    }));
+
+    const { error: estErr } = await supabase.from('dms_estimations').upsert(dbEstimations);
+    if (estErr) {
+      throw new Error(`[Estimations Sync Fail]: ${estErr.message}`);
+    }
+    reports.push(`Synced ${currentEstimations.length} sales pipeline estimations successfully`);
+  }
+
   return reports;
 }
 
@@ -999,4 +1073,26 @@ export async function saveServiceInvoiceToDb(s: ServiceInvoice) {
   }
 
   return { error: null };
+}
+
+export async function saveEstimationToDb(e: Estimation) {
+  const resolvedDealerId = await ensureDealerExistsInDb(e.dealerId);
+  return supabase.from('dms_estimations').upsert({
+    id: e.id,
+    dealer_id: resolvedDealerId,
+    slip_no: e.slipNo,
+    customer_name: e.customerName,
+    contact_no: e.contactNo,
+    address: e.address,
+    date: e.date,
+    model: e.model,
+    total_amount: e.totalAmount,
+    payment_method: e.paymentMethod,
+    lead_source: e.leadSource,
+    splits: e.splits || []
+  });
+}
+
+export async function deleteEstimationFromDb(id: string) {
+  return supabase.from('dms_estimations').delete().eq('id', id);
 }
