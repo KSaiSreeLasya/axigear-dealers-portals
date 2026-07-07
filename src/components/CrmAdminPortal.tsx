@@ -527,6 +527,23 @@ CREATE TABLE IF NOT EXISTS public.dms_service_invoice_splits (
     date DATE NOT NULL DEFAULT CURRENT_DATE
 );
 
+-- SALES PIPELINE ESTIMATIONS (Quotations and leads tracking)
+CREATE TABLE IF NOT EXISTS public.dms_estimations (
+    id TEXT PRIMARY KEY,
+    dealer_id TEXT NOT NULL REFERENCES public.dms_dealers(id) ON DELETE CASCADE,
+    slip_no TEXT NOT NULL,
+    customer_name TEXT NOT NULL,
+    contact_no TEXT,
+    address TEXT,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    model TEXT NOT NULL,
+    total_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+    payment_method TEXT NOT NULL DEFAULT 'Cash',
+    lead_source TEXT,
+    splits JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 -- VEHICLES AND SPARES TRANSFERS / LOGISTICS SHIPMENTS (HQ Shipments & Returns)
 CREATE TABLE IF NOT EXISTS public.dms_inventory_transfers (
     id TEXT PRIMARY KEY,

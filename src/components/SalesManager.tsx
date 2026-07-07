@@ -14,7 +14,7 @@ import {
   Edit2
 } from 'lucide-react';
 import { Sale, InventoryItem, Employee, Dealer, ServiceInvoice, ServiceInvoiceItem } from '../types';
-import { saveServiceInvoiceToDb } from '../lib/supabase';
+import { saveServiceInvoiceToDb, saveEstimationToDb, deleteEstimationFromDb } from '../lib/supabase';
 import { downloadCSV, downloadInvoiceHTML } from '../utils/csvHelper';
 
 export const SERVICE_PRODUCTS_PRESETS = [
@@ -207,6 +207,7 @@ export default function SalesManager({
       };
 
       setEstimations(estimations.map(est => est.id === editingEstimation.id ? updatedEst : est));
+      saveEstimationToDb(updatedEst).catch(console.error);
       setEditingEstimation(null);
       alert('Estimation updated successfully!');
     } else {
@@ -227,6 +228,7 @@ export default function SalesManager({
       };
 
       setEstimations([newEst, ...estimations]);
+      saveEstimationToDb(newEst).catch(console.error);
       alert('Estimation saved successfully!');
     }
 
@@ -257,6 +259,7 @@ export default function SalesManager({
   const handleDeleteEstimation = (id: string) => {
     if (confirm('Are you sure you want to delete this estimation?')) {
       setEstimations(estimations.filter(est => est.id !== id));
+      deleteEstimationFromDb(id).catch(console.error);
     }
   };
 
@@ -641,9 +644,12 @@ export default function SalesManager({
     setSaleSplits([{ amount: 0, paymentMethod: 'Cash', date: '2026-06-22' }]);
   };
 
+  const dealerEstimations = estimations.filter(e => e.dealerId === currentDealer.id);
+  const dealerServiceInvoices = serviceInvoices.filter(s => s.dealerId === currentDealer.id);
+
   const filteredProjects = dealerSales.filter(item => {
     const q = searchQuery.toLowerCase();
-    return item.customerName.toLowerCase().includes(q) || 
+    return item.customerName.toLowerCase().includes(q) ||
            item.invoiceNo.toLowerCase().includes(q) ||
            item.items.some(x => x.name.toLowerCase().includes(q));
   });
@@ -1086,7 +1092,7 @@ export default function SalesManager({
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
             <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
               <h2 className="text-xs font-bold text-gray-950 uppercase tracking-wide">Saved Pipeline Estimations</h2>
-              <span className="text-[10px] font-mono text-gray-400">Total: {estimations.length}</span>
+              <span className="text-[10px] font-mono text-gray-400">Total: {dealerEstimations.length}</span>
             </div>
 
             <div className="overflow-x-auto">
@@ -1103,7 +1109,7 @@ export default function SalesManager({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-150 text-gray-700 text-center">
-                  {estimations.map((est) => {
+                  {dealerEstimations.map((est) => {
                     const splitSum = est.splits.reduce((s, x) => s + x.amount, 0);
                     return (
                       <tr key={est.id} className="hover:bg-gray-50">
@@ -1147,6 +1153,11 @@ export default function SalesManager({
                       </tr>
                     );
                   })}
+                  {dealerEstimations.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-gray-400">No estimations created yet.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1178,7 +1189,7 @@ export default function SalesManager({
               </button>
               <button
                 type="button"
-                onClick={() => downloadCSV(serviceInvoices, 'Service_Invoices_Report')}
+                onClick={() => downloadCSV(dealerServiceInvoices, 'Service_Invoices_Report')}
                 className="flex items-center gap-1.5 bg-white border text-gray-700 py-1.5 px-3 rounded-lg text-xs font-semibold hover:border-emerald-600 transition-colors cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5 text-emerald-600" />
@@ -1551,7 +1562,7 @@ export default function SalesManager({
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm animate-in fade-in">
             <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center bg-semibold">
               <h2 className="text-xs font-bold text-gray-955 uppercase tracking-wide">Saved Technical Service Invoices</h2>
-              <span className="text-[10px] font-mono text-gray-400 font-bold">Total: {serviceInvoices.length}</span>
+              <span className="text-[10px] font-mono text-gray-400 font-bold">Total: {dealerServiceInvoices.length}</span>
             </div>
 
             <div className="overflow-x-auto">
@@ -1568,7 +1579,7 @@ export default function SalesManager({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-150 text-gray-750 text-center text-bold">
-                  {serviceInvoices.map((srv) => (
+                  {dealerServiceInvoices.map((srv) => (
                     <tr key={srv.id} className="hover:bg-gray-50 font-bold">
                       <td className="py-3 px-4 font-bold text-gray-950 text-left">{srv.invoiceNo}</td>
                       <td className="py-3 px-4 text-left font-semibold text-emerald-800">{srv.customerName}</td>
@@ -1606,7 +1617,7 @@ export default function SalesManager({
                       </td>
                     </tr>
                   ))}
-                  {serviceInvoices.length === 0 && (
+                  {dealerServiceInvoices.length === 0 && (
                     <tr>
                       <td colSpan={7} className="py-12 text-center text-gray-400 font-bold">No service invoices issued yet.</td>
                     </tr>

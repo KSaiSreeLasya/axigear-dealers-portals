@@ -152,6 +152,10 @@ export default function App() {
         localStorage.setItem('axigear_service_invoices', JSON.stringify(data.serviceInvoices));
       }
 
+      if (data.estimations && data.estimations.length > 0) {
+        localStorage.setItem('axigear_estimations', JSON.stringify(data.estimations));
+      }
+
       setSyncStatus('success');
       setSyncLog(`✅ Cloud pulling cycle completed successfully!
 - Fetched and mapped ${data.dealers.length} Franchises
@@ -161,7 +165,8 @@ export default function App() {
 - Fetched ${data.attendance.length} Attendance records
 - Fetched ${data.tickets.length} Active service registers
 - Fetched ${data.messages.length} Correspondence log elements.
-- Fetched ${data.serviceInvoices ? data.serviceInvoices.length : 0} Workshop service invoices.`);
+- Fetched ${data.serviceInvoices ? data.serviceInvoices.length : 0} Workshop service invoices.
+- Fetched ${data.estimations ? data.estimations.length : 0} Sales pipeline estimations.`);
     } catch (err: any) {
       console.error(err);
       setSyncStatus('error');
@@ -176,6 +181,9 @@ export default function App() {
       const serviceInvoicesStr = localStorage.getItem('axigear_service_invoices');
       const serviceInvoicesObj = serviceInvoicesStr ? JSON.parse(serviceInvoicesStr) : [];
 
+      const estimationsStr = localStorage.getItem('axigear_estimations');
+      const estimationsObj = estimationsStr ? JSON.parse(estimationsStr) : [];
+
       await pushDatabaseBulk(
         dealers,
         inventory,
@@ -184,12 +192,13 @@ export default function App() {
         sales,
         tickets,
         messages,
-        serviceInvoicesObj
+        serviceInvoicesObj,
+        estimationsObj
       );
 
       setSyncStatus('success');
       setSyncLog(`✅ Bulk write and seed phase dispatched securely!
-- All local records (including service invoices) are fully backed up to Supabase.
+- All local records (including service invoices and estimations) are fully backed up to Supabase.
 - Active tables populated without naming conflicts.`);
     } catch (err: any) {
       console.error(err);
