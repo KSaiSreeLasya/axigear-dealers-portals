@@ -512,11 +512,11 @@ export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 
         <td class="billing-col">
           <div class="billing-title">Retail Outlet / Franchisee</div>
           <div class="address-box">
-            <strong>${dealer?.name || 'N/A'}</strong><br>
-            Store Address: ${dealer?.location || address}<br>
+            <strong>${dealer?.name === 'ZEN -Z ENERGY' ? 'RAMYA RAJ ENTERPRISES LLP (ZEN -Z ENERGY)' : dealer?.name || 'N/A'}</strong><br>
+            Store Address: ${dealer?.name === 'ZEN -Z ENERGY' ? 'KRISHNAREDDYPET, BEERAMGUDA' : dealer?.location || address}<br>
             Dealer License Ref No: ${dealer?.code || 'N/A'}<br>
             FRANCHISE REGISTERED GSTIN: ${invoice.gstNo || (dealer?.name?.toLowerCase().includes('zen') ? '36ABLFR7464F1ZR' : '29AXGPI8174C3ZD')}<br>
-            Contact: ${customerPhone || 'N/A'}
+            Contact: ${dealer?.name === 'ZEN -Z ENERGY' ? '7989161749' : customerPhone || 'N/A'}
           </div>
         </td>
       </tr>
