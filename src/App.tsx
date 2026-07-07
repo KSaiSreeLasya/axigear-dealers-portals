@@ -126,6 +126,18 @@ export default function App() {
             console.log(`[Startup Alignment] Aligned active session dealer ID to database ID: ${aligned.id}`);
           }
         }
+
+        // Auto-pull data from Supabase on mount if connected
+        if (connected) {
+          const dbData = await pullDatabase();
+          if (dbData.sales.length > 0) setSales(dbData.sales);
+          if (dbData.dealers.length > 0) setDealers(dbData.dealers);
+          if (dbData.inventory.length > 0) setInventory(dbData.inventory);
+          if (dbData.employees.length > 0) setEmployees(dbData.employees);
+          if (dbData.attendance.length > 0) setAttendance(dbData.attendance);
+          if (dbData.tickets.length > 0) setTickets(dbData.tickets);
+          if (dbData.messages.length > 0) setMessages(dbData.messages);
+        }
       } catch (err) {
         setDbTablesExist(false);
       }
