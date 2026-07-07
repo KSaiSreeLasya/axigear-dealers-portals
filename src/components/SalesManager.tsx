@@ -1977,7 +1977,7 @@ export default function SalesManager({
               </span>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => downloadInvoiceHTML(viewingTaxInvoice.data, viewingTaxInvoice.type)}
+                  onClick={() => downloadInvoiceHTML(viewingTaxInvoice.data, viewingTaxInvoice.type, currentDealer)}
                   className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xs tracking-wide flex items-center gap-1 transition-all cursor-pointer shadow-sm"
                 >
                   <Download className="w-3.5 h-3.5" />
@@ -2118,7 +2118,7 @@ export default function SalesManager({
                         <td className="py-3 px-3 text-left space-y-0.5 text-[9px] leading-tight-more">
                           <p><span className="text-gray-400 font-mono">Chassis:</span> <span className="font-bold text-gray-800 font-mono">{viewingTaxInvoice.data.chassisNo || 'N/A'}</span></p>
                           <p><span className="text-gray-400 font-mono">Motor:</span> <span className="font-bold text-gray-800 font-mono">{viewingTaxInvoice.data.motorNo || 'N/A'}</span></p>
-                          <p><span className="text-gray-400 font-mono">Battery:</span> <span className="font-bold text-gray-800 font-mono">{viewingTaxInvoice.data.batteryNo || 'N/A'} (Capacity: {viewingTaxInvoice.data.batteryCapacity || '45V-30AH'})</span></p>
+                          <p><span className="text-gray-400 font-mono">Battery:</span> <span className="font-bold text-gray-800 font-mono">{viewingTaxInvoice.data.batteryNo || 'N/A'}</span></p>
                           <p><span className="text-gray-400">Warranty:</span> <span className="text-emerald-700 font-bold">{viewingTaxInvoice.data.batteryWarranty || '36 months'} (Vehicle: {viewingTaxInvoice.data.vehicleWarranty || '12 months'})</span></p>
                         </td>
                         <td className="py-3 px-3 text-right font-semibold">1 unit</td>
