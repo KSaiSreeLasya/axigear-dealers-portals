@@ -471,7 +471,7 @@ export default function SalesManager({
 
   const srvProductTotal = srvProducts.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
   const srvSubtotal = srvProductTotal + srvLabourCharges;
-  const srvGstAmount = srvEnableGst ? Math.round(srvSubtotal * 0.05 * 100) / 100 : 0;
+  const srvGstAmount = srvEnableGst ? Math.round(srvSubtotal * 0.18 * 100) / 100 : 0;
   const srvInvoiceTotal = srvSubtotal + srvGstAmount;
 
   // Split calculations for Service
@@ -1438,7 +1438,7 @@ export default function SalesManager({
                 <span className="font-mono">₹{srvLabourCharges.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between">
-                <span>GST (5%):</span>
+                <span>GST (18%):</span>
                 <span className="font-mono">₹{srvGstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between border-t border-gray-300 pt-2 font-bold text-sm text-emerald-800 bg-emerald-50 px-3 py-2 rounded-lg">
@@ -2169,7 +2169,7 @@ export default function SalesManager({
                             <td className="py-2.5 px-3 text-right font-semibold">{p.quantity} unit(s)</td>
                             <td className="py-2.5 px-3 text-right font-mono">₹{p.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                             <td className="py-2.5 px-3 text-right font-mono text-[9px] text-gray-500">
-                              {viewingTaxInvoice.data.enableGst ? 'CGST 2.5%\nSGST 2.5%' : '0% Exempt'}
+                              {viewingTaxInvoice.data.enableGst ? 'CGST 9%\nSGST 9%' : '0% Exempt'}
                             </td>
                             <td className="py-2.5 px-3 text-right font-mono font-bold text-gray-900">
                               ₹{(p.price * p.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -2188,7 +2188,7 @@ export default function SalesManager({
                             <td className="py-3 px-3 text-right font-semibold">1 unit</td>
                             <td className="py-3 px-3 text-right font-mono">₹{viewingTaxInvoice.data.labourCharges.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                             <td className="py-3 px-3 text-right font-mono text-[9px] text-gray-500">
-                              {viewingTaxInvoice.data.enableGst ? 'CGST 2.5%\nSGST 2.5%' : '0% Exempt'}
+                              {viewingTaxInvoice.data.enableGst ? 'CGST 9%\nSGST 9%' : '0% Exempt'}
                             </td>
                             <td className="py-3 px-3 text-right font-mono font-bold text-gray-900">
                               ₹{viewingTaxInvoice.data.labourCharges.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -2239,13 +2239,18 @@ export default function SalesManager({
                   
                   {/* Calculation logic */}
                   {(() => {
-                    const grossValue = viewingTaxInvoice.data.totalAmount || 
+                    const grossValue = viewingTaxInvoice.data.totalAmount ||
                                        ((viewingTaxInvoice.data.products?.reduce((s: number, p: any) => s + (p.price * p.quantity), 0) || 0) + (viewingTaxInvoice.data.labourCharges || 0)) || 0;
-                    
+
                     const isGstEnabled = viewingTaxInvoice.type === 'service' ? viewingTaxInvoice.data.enableGst : true;
-                    const baseValue = isGstEnabled ? (grossValue / 1.05) : grossValue;
-                    const cGst = isGstEnabled ? (baseValue * 0.025) : 0;
-                    const sGst = isGstEnabled ? (baseValue * 0.025) : 0;
+                    const gstRate = viewingTaxInvoice.type === 'service' ? 0.18 : 0.05;
+                    const cgstRate = gstRate / 2;
+                    const sgstRate = gstRate / 2;
+                    const baseValue = isGstEnabled ? (grossValue / (1 + gstRate)) : grossValue;
+                    const cGst = isGstEnabled ? (baseValue * cgstRate) : 0;
+                    const sGst = isGstEnabled ? (baseValue * sgstRate) : 0;
+                    const cgstPercentage = Math.round(cgstRate * 100);
+                    const sgstPercentage = Math.round(sgstRate * 100);
 
                     return (
                       <>
@@ -2254,11 +2259,11 @@ export default function SalesManager({
                           <span className="font-mono bg-white px-2.5 rounded">₹{baseValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between text-gray-600">
-                          <span>Central Excise Goods Tax (CGST 2.5%):</span>
+                          <span>Central Excise Goods Tax (CGST {cgstPercentage}%):</span>
                           <span className="font-mono">₹{cGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between text-gray-600 border-b pb-2">
-                          <span>State Services Goods Tax (SGST 2.5%):</span>
+                          <span>State Services Goods Tax (SGST {sgstPercentage}%):</span>
                           <span className="font-mono">₹{sGst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex justify-between font-black text-gray-950 text-sm bg-gray-200/85 p-2.5 rounded-md">
