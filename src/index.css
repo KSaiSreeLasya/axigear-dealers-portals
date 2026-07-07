@@ -51,13 +51,13 @@ html, body {
   html, body {
     margin: 0 !important;
     padding: 0 !important;
-    height: 100% !important;
     background: #ffffff !important;
   }
 
   body {
     background-color: #ffffff !important;
     color: #000000 !important;
+    width: 100% !important;
   }
 
   /* Hide all elements by default */
@@ -65,21 +65,19 @@ html, body {
     display: none !important;
   }
 
-  /* Show the modal overlay */
+  /* Show ONLY the modal overlay */
   .invoice-print-modal-overlay {
-    display: flex !important;
+    display: block !important;
     position: static !important;
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
     height: auto !important;
-    background: transparent !important;
+    background: #ffffff !important;
     backdrop-filter: none !important;
     inset: auto !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex-direction: column !important;
     overflow: visible !important;
+    page-break-inside: avoid !important;
   }
 
   /* Show the modal content */
@@ -96,62 +94,95 @@ html, body {
     box-shadow: none !important;
     border-radius: 0 !important;
     overflow: visible !important;
+    page-break-inside: avoid !important;
   }
 
-  /* Hide the modal controls (print button, close button, etc.) */
+  /* Hide the modal header controls (print button, close button, etc.) */
   .invoice-print-modal-content > div:first-child {
     display: none !important;
   }
 
-  /* Show the printable block */
+  /* Show the printable block - MUST be only child displayed */
   #printable-gst-invoice-block {
     display: block !important;
     position: static !important;
     visibility: visible !important;
     margin: 0 !important;
-    padding: 40px 20px !important;
+    padding: 20px 15px !important;
     width: 100% !important;
     height: auto !important;
     background: #ffffff !important;
     border: none !important;
     overflow: visible !important;
+    page-break-inside: avoid !important;
+    font-size: 10px !important;
   }
 
-  /* Preserve all child elements visibility and layout */
+  /* Reset all nested elements for proper display */
   #printable-gst-invoice-block * {
     visibility: visible !important;
-    display: block !important;
     position: static !important;
     width: auto !important;
     height: auto !important;
     overflow: visible !important;
+    margin: inherit !important;
+    padding: inherit !important;
+    border: inherit !important;
+  }
+
+  /* Fix block elements */
+  #printable-gst-invoice-block div,
+  #printable-gst-invoice-block p,
+  #printable-gst-invoice-block h1,
+  #printable-gst-invoice-block h2,
+  #printable-gst-invoice-block h3,
+  #printable-gst-invoice-block h4,
+  #printable-gst-invoice-block h5,
+  #printable-gst-invoice-block h6 {
+    display: block !important;
+    width: auto !important;
+  }
+
+  /* Fix inline elements */
+  #printable-gst-invoice-block span,
+  #printable-gst-invoice-block strong,
+  #printable-gst-invoice-block em,
+  #printable-gst-invoice-block i,
+  #printable-gst-invoice-block b {
+    display: inline !important;
   }
 
   /* Fix table layout */
-  table, tbody, thead, tr, td, th {
+  #printable-gst-invoice-block table {
     display: table !important;
-    width: auto !important;
+    width: 100% !important;
     page-break-inside: avoid !important;
+    border-collapse: collapse !important;
   }
 
-  tbody, thead {
+  #printable-gst-invoice-block tbody,
+  #printable-gst-invoice-block thead {
     display: table-row-group !important;
   }
 
-  tr {
+  #printable-gst-invoice-block tr {
     display: table-row !important;
+    page-break-inside: avoid !important;
   }
 
-  td, th {
+  #printable-gst-invoice-block td,
+  #printable-gst-invoice-block th {
     display: table-cell !important;
   }
 
-  /* Ensure proper spacing */
-  div, p, span, h1, h2, h3, h4, h5, h6 {
-    display: block !important;
+  /* Prevent page breaks in critical content */
+  #printable-gst-invoice-block > div {
+    page-break-inside: avoid !important;
   }
 
-  span {
-    display: inline !important;
+  /* Set page margins and size */
+  @page {
+    margin: 0 !important;
+    size: A4;
   }
 }

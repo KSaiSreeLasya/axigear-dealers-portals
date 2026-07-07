@@ -2000,7 +2000,7 @@ export default function SalesManager({
             </div>
 
             {/* Printable Invoice paper container */}
-            <div className="p-6 md:p-8 space-y-6 font-sans text-[11px] leading-relaxed select-text" id="printable-gst-invoice-block">
+            <div className="p-4 md:p-6 space-y-3 font-sans text-[10px] leading-relaxed select-text" id="printable-gst-invoice-block">
               
               {/* Header Label bar */}
               <div className="text-center font-bold text-sm tracking-widest uppercase border border-gray-800 py-1 bg-gray-100/90 text-gray-900 border-b-2">
@@ -2010,7 +2010,7 @@ export default function SalesManager({
               {/* Company & Dealer metadata details double column header */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-gray-400 pb-4">
                 <div className="space-y-1">
-                  <h4 className="font-extrabold text-base tracking-tight text-gray-950">AXIGEAR LOUNGE LLP</h4>
+                  <h4 className="font-extrabold text-base tracking-tight text-gray-950">AXIGEAR ELECTRIC LOUNGE LLP</h4>
                   <p className="text-gray-500 text-[10px]">
                     Registered Office: SY 02, PLOT NO.148, MYTHRI NAGAR, MADINAGUDA
 
@@ -2273,7 +2273,7 @@ export default function SalesManager({
                   * Dynamic billing audit index: {viewingTaxInvoice.data.id} • Registered server secure point
                 </div>
                 <div className="text-right space-y-4">
-                  <span className="text-gray-400 font-bold block text-[9px]">For AXIGEAR LOUNGE LLP</span>
+                  <span className="text-gray-400 font-bold block text-[9px]">For AXIGEAR ELECTRIC LOUNGE LLP</span>
                   <div className="h-6"></div>
                   <span className="border-t border-gray-400 pt-1 px-4 inline-block font-extrabold text-gray-900 text-[10px]">Authorized Signatory</span>
                 </div>
