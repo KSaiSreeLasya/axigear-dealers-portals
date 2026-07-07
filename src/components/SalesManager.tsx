@@ -1984,13 +1984,6 @@ export default function SalesManager({
                   <span>Download Offline HTML</span>
                 </button>
                 <button
-                  onClick={() => window.print()}
-                  className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-850 text-white font-bold rounded-lg text-xs tracking-wide flex items-center gap-1 transition-all cursor-pointer shadow-sm"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print / Save PDF</span>
-                </button>
-                <button
                   onClick={() => setViewingTaxInvoice(null)}
                   className="p-1 px-3 bg-gray-100 hover:bg-gray-200 rounded border text-gray-550 cursor-pointer text-xs font-bold"
                 >
