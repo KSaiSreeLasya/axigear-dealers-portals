@@ -51,7 +51,7 @@ export function downloadCSV(data: any[], filename: string) {
  * Utility to generate a beautiful, responsive, and A4 print-optimized standalone HTML invoice.
  * It downloads the file directly to the client's browser.
  */
-export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 'service' | 'dealer_invoice') {
+export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 'service' | 'dealer_invoice', dealer?: any) {
   if (!invoice) {
     alert("No invoice data specified.");
     return;
@@ -122,7 +122,6 @@ export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 
       <tr><td><strong>Chassis No:</strong></td><td>${invoice.chassisNo || 'N/A'}</td></tr>
       <tr><td><strong>Motor No:</strong></td><td>${invoice.motorNo || 'N/A'}</td></tr>
       <tr><td><strong>Battery No:</strong></td><td>${invoice.batteryNo || 'N/A'}</td></tr>
-      <tr><td><strong>Battery Capacity:</strong></td><td>${invoice.batteryCapacity || 'N/A'}</td></tr>
       <tr><td><strong>Battery Warranty:</strong></td><td>${invoice.batteryWarranty || 'N/A'}</td></tr>
       <tr><td><strong>Vehicle Warranty:</strong></td><td>${invoice.vehicleWarranty || 'N/A'}</td></tr>
     `;
@@ -503,20 +502,21 @@ export function downloadInvoiceHTML(invoice: any, type: 'sale' | 'estimation' | 
         <td class="billing-col">
           <div class="billing-title">Consignor (Issuer)</div>
           <div class="address-box">
-            <strong>AXIGEAR PRIVATE LIMITED</strong><br>
-            Corporate HQ, Phase-2 Tech Depot<br>
-            Hyderabad, Telangana, 500081<br>
-            GSTIN: 36ABLFR7464F1ZR<br>
+            <strong>AXIGEAR ELECTRIC LOUNGE LLP</strong><br>
+            Registered Office: SY 02, PLOT NO.148, MYTHRI NAGAR, MADINAGUDA<br>
+            HYDERABAD, TELANGANA, INDIA 500049<br>
+            GSTIN: 36ACJFA4386L1ZW<br>
             Contact: support@axigear.com
           </div>
         </td>
         <td class="billing-col">
-          <div class="billing-title">Consignee (Recipient)</div>
+          <div class="billing-title">Retail Outlet / Franchisee</div>
           <div class="address-box">
-            <strong>${customerName}</strong><br>
-            Location/Branch: ${address}<br>
-            Contact Phone: ${customerPhone}<br>
-            GST Status: CGST/SGST Applicable
+            <strong>${dealer?.name || 'N/A'}</strong><br>
+            Store Address: ${dealer?.location || address}<br>
+            Dealer License Ref No: ${dealer?.code || 'N/A'}<br>
+            FRANCHISE REGISTERED GSTIN: ${invoice.gstNo || (dealer?.name?.toLowerCase().includes('zen') ? '36ABLFR7464F1ZR' : '29AXGPI8174C3ZD')}<br>
+            Contact: ${customerPhone || 'N/A'}
           </div>
         </td>
       </tr>
