@@ -137,6 +137,14 @@ export default function App() {
           if (dbData.attendance.length > 0) setAttendance(dbData.attendance);
           if (dbData.tickets.length > 0) setTickets(dbData.tickets);
           if (dbData.messages.length > 0) setMessages(dbData.messages);
+
+          // Sync estimations and service invoices to localStorage
+          if (dbData.serviceInvoices && dbData.serviceInvoices.length > 0) {
+            localStorage.setItem('axigear_service_invoices', JSON.stringify(dbData.serviceInvoices));
+          }
+          if (dbData.estimations && dbData.estimations.length > 0) {
+            localStorage.setItem('axigear_estimations', JSON.stringify(dbData.estimations));
+          }
         }
       } catch (err) {
         setDbTablesExist(false);
